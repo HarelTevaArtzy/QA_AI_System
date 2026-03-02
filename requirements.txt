@@ -1,0 +1,8 @@
+fastapi>=0.115.0
+uvicorn[standard]>=0.34.0
+sqlalchemy>=2.0.36
+openpyxl>=3.1.5
+python-docx>=1.1.2
+agno>=1.8.0
+openai>=1.66.0
+ollama>=0.4.7

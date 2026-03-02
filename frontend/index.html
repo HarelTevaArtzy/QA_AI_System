@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agentic QA System</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+<div class="page-shell">
+    <header class="hero">
+        <div class="hero-copy">
+            <p class="eyebrow">QA Scenario Management with Agentic AI</p>
+            <h1>Capture scenarios, store discussion knowledge, and enrich it automatically.</h1>
+            <p class="hero-text">
+                A lightweight QA workspace for scenario authoring, testing discussions, export workflows,
+                and Agno-backed analysis.
+            </p>
+        </div>
+        <div class="hero-metrics">
+            <article class="metric-card">
+                <span class="metric-label">Scenarios</span>
+                <strong class="metric-value" id="scenario-count">0</strong>
+            </article>
+            <article class="metric-card">
+                <span class="metric-label">Topics</span>
+                <strong class="metric-value" id="topic-count">0</strong>
+            </article>
+            <article class="metric-card">
+                <span class="metric-label">Enriched Messages</span>
+                <strong class="metric-value" id="enriched-count">0</strong>
+            </article>
+        </div>
+    </header>
+
+    <main class="workspace-grid">
+        <section class="panel panel-scenarios">
+            <div class="panel-heading">
+                <div>
+                    <p class="section-label">Scenario Management</p>
+                    <h2>Build and export QA scenarios</h2>
+                </div>
+                <div class="export-actions">
+                    <button type="button" class="ghost-button" id="export-excel">Export Excel</button>
+                    <button type="button" class="ghost-button" id="export-word">Export Word</button>
+                </div>
+            </div>
+
+            <div class="scenario-layout">
+                <form id="scenario-form" class="card form-card">
+                    <div class="card-heading">
+                        <h3 id="scenario-form-title">Create Scenario</h3>
+                        <button type="button" class="text-button" id="scenario-reset">Clear</button>
+                    </div>
+                    <input type="hidden" id="scenario-id">
+
+                    <label>
+                        <span>Title</span>
+                        <input type="text" id="scenario-title" placeholder="Checkout denies duplicate payment" required>
+                    </label>
+
+                    <label>
+                        <span>Description</span>
+                        <textarea id="scenario-description" rows="3"
+                                  placeholder="Describe the scope, feature, or defect context."></textarea>
+                    </label>
+
+                    <label>
+                        <span>Test Steps</span>
+                        <textarea id="scenario-steps" rows="5"
+                                  placeholder="One step per line."></textarea>
+                    </label>
+
+                    <label>
+                        <span>Expected Results</span>
+                        <textarea id="scenario-expected" rows="4"
+                                  placeholder="One expected result per line."></textarea>
+                    </label>
+
+                    <label>
+                        <span>Priority</span>
+                        <select id="scenario-priority">
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                            <option value="critical">Critical</option>
+                        </select>
+                    </label>
+
+                    <button type="submit" class="primary-button" id="scenario-submit">Save Scenario</button>
+                    <p class="form-status" id="scenario-status"></p>
+                </form>
+
+                <div class="card list-card">
+                    <div class="card-heading">
+                        <h3>Scenario Library</h3>
+                        <span class="pill" id="scenario-list-count">0 items</span>
+                    </div>
+                    <div id="scenario-list" class="scenario-list"></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel panel-discussions">
+            <div class="panel-heading">
+                <div>
+                    <p class="section-label">Testing Discussions</p>
+                    <h2>Turn topic threads into QA knowledge</h2>
+                </div>
+                <p class="hint-text">Messages are enriched asynchronously after posting.</p>
+            </div>
+
+            <div class="discussion-layout">
+                <aside class="card sidebar-card">
+                    <form id="topic-form" class="inline-form">
+                        <label class="sr-only" for="topic-title">Topic title</label>
+                        <input type="text" id="topic-title" placeholder="Create a testing topic" required>
+                        <button type="submit" class="primary-button small">Add Topic</button>
+                    </form>
+                    <p class="form-status" id="topic-status"></p>
+                    <div id="topic-list" class="topic-list"></div>
+                </aside>
+
+                <div class="card chat-card">
+                    <div class="chat-header">
+                        <div>
+                            <span class="section-label">Active Topic</span>
+                            <h3 id="active-topic-title">Select or create a topic</h3>
+                        </div>
+                        <button type="button" class="ghost-button small" id="refresh-messages">Refresh</button>
+                    </div>
+
+                    <div id="message-list" class="message-list">
+                        <div class="empty-state">
+                            Choose a topic to view its conversation history.
+                        </div>
+                    </div>
+
+                    <form id="message-form" class="message-form">
+                        <label class="sr-only" for="message-content">Message</label>
+                        <textarea id="message-content" rows="4"
+                                  placeholder="Describe a bug, workflow, or QA concern for enrichment."></textarea>
+                        <div class="message-actions">
+                            <p class="form-status" id="message-status"></p>
+                            <button type="submit" class="primary-button">Post Message</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script src="/static/scenarios.js" defer></script>
+<script src="/static/discussions.js" defer></script>
+</body>
+</html>
