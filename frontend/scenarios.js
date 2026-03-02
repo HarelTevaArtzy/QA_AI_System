@@ -14,6 +14,8 @@
     const resetButton = document.getElementById("scenario-reset");
     const exportExcelButton = document.getElementById("export-excel");
     const exportWordButton = document.getElementById("export-word");
+    const panelNode = document.querySelector(".panel-scenarios");
+    const panelToggleButton = document.getElementById("scenario-panel-toggle");
 
     const state = {
         editingId: null,
@@ -50,6 +52,24 @@
         const count = state.scenarios.length;
         countNode.textContent = `${count} item${count === 1 ? "" : "s"}`;
         metricNode.textContent = String(count);
+    }
+
+    function setCollapsedState(container, button, isCollapsed) {
+        if (!(container instanceof HTMLElement) || !(button instanceof HTMLButtonElement)) {
+            return;
+        }
+        container.classList.toggle("is-collapsed", isCollapsed);
+        container.classList.toggle("is-expanded", !isCollapsed);
+        button.setAttribute("aria-expanded", String(!isCollapsed));
+
+        const label = button.querySelector(".collapse-toggle-label");
+        const icon = button.querySelector(".collapse-toggle-icon");
+        if (label) {
+            label.textContent = isCollapsed ? "Expand" : "Collapse";
+        }
+        if (icon) {
+            icon.textContent = isCollapsed ? "+" : "-";
+        }
     }
 
     function renderScenarios() {
@@ -209,7 +229,16 @@
         window.open("/export/scenarios/word", "_blank", "noopener");
     });
 
+    panelToggleButton?.addEventListener("click", () => {
+        if (!(panelNode instanceof HTMLElement)) {
+            return;
+        }
+        const isCollapsed = !panelNode.classList.contains("is-collapsed");
+        setCollapsedState(panelNode, panelToggleButton, isCollapsed);
+    });
+
     form.addEventListener("submit", saveScenario);
     resetButton.addEventListener("click", resetForm);
+    setCollapsedState(panelNode, panelToggleButton, true);
     loadScenarios();
 })();

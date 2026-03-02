@@ -34,19 +34,32 @@
     </header>
 
     <main class="workspace-grid">
-        <section class="panel panel-scenarios">
+        <section class="panel panel-scenarios collapsible-panel is-collapsed">
             <div class="panel-heading">
                 <div>
                     <p class="section-label">Scenario Management</p>
                     <h2>Build and export QA scenarios</h2>
                 </div>
-                <div class="export-actions">
-                    <button type="button" class="ghost-button" id="export-excel">Export Excel</button>
-                    <button type="button" class="ghost-button" id="export-word">Export Word</button>
+                <div class="panel-heading-actions">
+                    <div class="export-actions">
+                        <button type="button" class="ghost-button" id="export-excel">Export Excel</button>
+                        <button type="button" class="ghost-button" id="export-word">Export Word</button>
+                    </div>
+                    <button
+                        type="button"
+                        class="ghost-button collapse-toggle"
+                        id="scenario-panel-toggle"
+                        aria-expanded="false"
+                        aria-controls="scenario-panel-body"
+                    >
+                        <span class="collapse-toggle-label">Expand</span>
+                        <span class="collapse-toggle-icon" aria-hidden="true">+</span>
+                    </button>
                 </div>
             </div>
 
-            <div class="scenario-layout">
+            <div class="panel-body" id="scenario-panel-body">
+                <div class="scenario-layout">
                 <form id="scenario-form" class="card form-card">
                     <div class="card-heading">
                         <h3 id="scenario-form-title">Create Scenario</h3>
@@ -98,27 +111,49 @@
                     </div>
                     <div id="scenario-list" class="scenario-list"></div>
                 </div>
+                </div>
             </div>
         </section>
 
-        <section class="panel panel-discussions">
+        <section class="panel panel-discussions collapsible-panel is-collapsed">
             <div class="panel-heading">
                 <div>
                     <p class="section-label">Testing Discussions</p>
                     <h2>Turn topic threads into QA knowledge</h2>
                 </div>
-                <p class="hint-text">Messages are enriched asynchronously after posting.</p>
+                <div class="panel-heading-actions">
+                    <p class="hint-text">Messages are enriched asynchronously after posting.</p>
+                    <button
+                        type="button"
+                        class="ghost-button collapse-toggle"
+                        id="discussion-panel-toggle"
+                        aria-expanded="false"
+                        aria-controls="discussion-panel-body"
+                    >
+                        <span class="collapse-toggle-label">Expand</span>
+                        <span class="collapse-toggle-icon" aria-hidden="true">+</span>
+                    </button>
+                </div>
             </div>
 
-            <div class="discussion-layout">
-                <aside class="card sidebar-card">
-                    <form id="topic-form" class="inline-form">
-                        <label class="sr-only" for="topic-title">Topic title</label>
-                        <input type="text" id="topic-title" placeholder="Create a testing topic" required>
-                        <button type="submit" class="primary-button small">Add Topic</button>
-                    </form>
-                    <p class="form-status" id="topic-status"></p>
-                    <div id="topic-list" class="topic-list"></div>
+            <div class="panel-body" id="discussion-panel-body">
+                <div class="discussion-layout">
+                <aside class="card sidebar-card" id="topic-sidebar">
+                    <div class="card-heading">
+                        <div>
+                            <p class="section-label">Topics</p>
+                            <h3>Discussion Topics</h3>
+                        </div>
+                    </div>
+                    <div class="sidebar-body">
+                        <form id="topic-form" class="inline-form">
+                            <label class="sr-only" for="topic-title">Topic title</label>
+                            <input type="text" id="topic-title" placeholder="Create a testing topic" required>
+                            <button type="submit" class="primary-button small">Add Topic</button>
+                        </form>
+                        <p class="form-status" id="topic-status"></p>
+                        <div id="topic-list" class="topic-list"></div>
+                    </div>
                 </aside>
 
                 <div class="card chat-card">
@@ -145,6 +180,7 @@
                             <button type="submit" class="primary-button">Post Message</button>
                         </div>
                     </form>
+                </div>
                 </div>
             </div>
         </section>

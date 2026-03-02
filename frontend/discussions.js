@@ -11,6 +11,8 @@
     const activeTopicTitle = document.getElementById("active-topic-title");
     const refreshButton = document.getElementById("refresh-messages");
     const enrichedCount = document.getElementById("enriched-count");
+    const panelNode = document.querySelector(".panel-discussions");
+    const panelToggleButton = document.getElementById("discussion-panel-toggle");
 
     const state = {
         topics: [],
@@ -49,6 +51,24 @@
             0
         );
         enrichedCount.textContent = String(enrichedMessages);
+    }
+
+    function setCollapsedState(container, button, isCollapsed) {
+        if (!(container instanceof HTMLElement) || !(button instanceof HTMLButtonElement)) {
+            return;
+        }
+        container.classList.toggle("is-collapsed", isCollapsed);
+        container.classList.toggle("is-expanded", !isCollapsed);
+        button.setAttribute("aria-expanded", String(!isCollapsed));
+
+        const label = button.querySelector(".collapse-toggle-label");
+        const icon = button.querySelector(".collapse-toggle-icon");
+        if (label) {
+            label.textContent = isCollapsed ? "Expand" : "Collapse";
+        }
+        if (icon) {
+            icon.textContent = isCollapsed ? "+" : "-";
+        }
     }
 
     function renderTopics() {
@@ -214,6 +234,14 @@
         await Promise.all([loadTopics(), loadMessages()]);
     });
 
+    panelToggleButton?.addEventListener("click", () => {
+        if (!(panelNode instanceof HTMLElement)) {
+            return;
+        }
+        const isCollapsed = !panelNode.classList.contains("is-collapsed");
+        setCollapsedState(panelNode, panelToggleButton, isCollapsed);
+    });
+
     topicForm.addEventListener("submit", createTopic);
     messageForm.addEventListener("submit", postMessage);
 
@@ -224,5 +252,6 @@
         await Promise.all([loadTopics(), loadMessages()]);
     }, 4000);
 
+    setCollapsedState(panelNode, panelToggleButton, true);
     loadTopics();
 })();

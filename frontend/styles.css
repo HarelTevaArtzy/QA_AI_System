@@ -15,6 +15,7 @@
     --radius-lg: 28px;
     --radius-md: 18px;
     --radius-sm: 12px;
+    --discussion-card-height: clamp(560px, 70vh, 720px);
 }
 
 * {
@@ -281,6 +282,52 @@ button:hover {
     flex-wrap: wrap;
 }
 
+.panel-heading-actions {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.panel-body,
+.sidebar-body {
+    min-height: 0;
+}
+
+.collapsible-panel.is-collapsed .panel-body,
+.collapsible-card.is-collapsed .sidebar-body {
+    display: none;
+}
+
+.collapsible-panel.is-collapsed .panel-heading,
+.collapsible-card.is-collapsed .card-heading {
+    margin-bottom: 0;
+}
+
+.collapsible-card.is-collapsed {
+    height: auto;
+    align-self: start;
+}
+
+.collapse-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.collapse-toggle-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.4rem;
+    height: 1.4rem;
+    border-radius: 999px;
+    background: rgba(177, 65, 46, 0.1);
+    font-weight: 700;
+    line-height: 1;
+}
+
 .form-status {
     min-height: 1.2rem;
     margin: 10px 0 0;
@@ -395,8 +442,19 @@ button:hover {
 
 .sidebar-card {
     display: grid;
-    align-content: start;
+    grid-template-rows: auto minmax(0, 1fr);
+    align-content: stretch;
+    gap: 0;
+    height: var(--discussion-card-height);
+    min-height: 0;
+    overflow: hidden;
+}
+
+.sidebar-body {
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr);
     gap: 12px;
+    min-height: 0;
 }
 
 .inline-form {
@@ -424,13 +482,21 @@ button:hover {
 
 .chat-card {
     display: grid;
-    min-height: 620px;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    height: var(--discussion-card-height);
+    min-height: 0;
+    overflow: hidden;
 }
 
 .message-list {
     align-content: start;
-    min-height: 380px;
-    max-height: 640px;
+    min-height: 0;
+    overflow: auto;
+    padding-right: 6px;
+}
+
+.topic-list {
+    min-height: 0;
     overflow: auto;
     padding-right: 6px;
 }
@@ -529,11 +595,21 @@ button:hover {
         grid-template-columns: 1fr;
     }
 
-    .chat-card {
-        min-height: auto;
+    .panel-heading-actions {
+        justify-content: stretch;
     }
 
-    .message-list {
-        max-height: none;
+    .chat-card {
+        height: auto;
+    }
+
+    .sidebar-card {
+        height: auto;
+    }
+
+    .sidebar-body,
+    .message-list,
+    .topic-list {
+        min-height: auto;
     }
 }
