@@ -10,7 +10,13 @@
     const messageList = document.getElementById("message-list");
     const activeTopicTitle = document.getElementById("active-topic-title");
     const refreshButton = document.getElementById("refresh-messages");
+    const generateScenariosButton = document.getElementById("generate-scenarios");
+    const scenarioSuggestionsCard = document.getElementById("scenario-suggestions-card");
+    const scenarioSuggestionsToggle = document.getElementById("scenario-suggestions-toggle");
+    const scenarioSuggestionsNode = document.getElementById("scenario-suggestions");
+    const scenarioSuggestionsStatus = document.getElementById("scenario-suggestions-status");
     const enrichedCount = document.getElementById("enriched-count");
+    const scenarioCount = document.getElementById("scenario-count");
     const panelNode = document.querySelector(".panel-discussions");
     const panelToggleButton = document.getElementById("discussion-panel-toggle");
 
@@ -19,6 +25,8 @@
         messages: [],
         activeTopicId: null,
         refreshTimer: null,
+        latestScenarioSuggestions: "",
+        latestScenarioItems: [],
     };
 
     function setTopicStatus(message, isError = false) {
@@ -29,6 +37,11 @@
     function setMessageStatus(message, isError = false) {
         messageStatus.textContent = message;
         messageStatus.style.color = isError ? "#8e1b12" : "";
+    }
+
+    function setScenarioSuggestionsStatus(message, isError = false) {
+        scenarioSuggestionsStatus.textContent = message;
+        scenarioSuggestionsStatus.style.color = isError ? "#8e1b12" : "";
     }
 
     function escapeHtml(value) {
@@ -45,12 +58,58 @@
     }
 
     function sanitizeEnrichmentContent(value) {
-        const content = String(value || "").trim();
+        let content = String(value || "").trim();
         const summaryMatch = content.match(/^##\s*summary\b/im);
         if (!summaryMatch || typeof summaryMatch.index !== "number") {
             return content;
         }
-        return content.slice(summaryMatch.index).trim();
+        content = content.slice(summaryMatch.index).trim();
+        content = content.replace(/([^\n])\s*(##\s*[A-Za-z])/g, "$1\n\n$2");
+        return normalizeSectionBlocks(content);
+    }
+
+    function normalizeHeadingTitle(title) {
+        const compact = title.trim().replace(/\s+/g, " ").toLowerCase();
+        const canonicalTitles = {
+            "summary": "Summary",
+            "suggested test types": "Test Type Classification",
+            "test type classification": "Test Type Classification",
+            "risks": "Risks",
+            "risks to probe": "Risks To Probe",
+            "test ideas": "Test Ideas",
+            "candidate scenario ideas": "Candidate Scenario Ideas",
+            "best practices": "Best Practices",
+            "related scenarios": "Related Scenarios",
+            "qa heuristics": "QA Heuristics",
+            "related discussion context": "Related Discussion Context",
+        };
+        return canonicalTitles[compact] || title.trim();
+    }
+
+    function normalizeSectionBlocks(content) {
+        const sectionPattern = /^##\s+(.+?)\s*\n([\s\S]*?)(?=^##\s+|\Z)/gim;
+        const sections = [];
+        const sectionIndexByTitle = new Map();
+        let match;
+
+        while ((match = sectionPattern.exec(content)) !== null) {
+            const title = normalizeHeadingTitle(match[1]);
+            const body = match[2].trim();
+            if (sectionIndexByTitle.has(title)) {
+                sections[sectionIndexByTitle.get(title)] = {title, body};
+                continue;
+            }
+            sectionIndexByTitle.set(title, sections.length);
+            sections.push({title, body});
+        }
+
+        if (!sections.length) {
+            return content;
+        }
+
+        return sections
+            .map(({title, body}) => `## ${title}\n\n${body}`.trim())
+            .join("\n\n");
     }
 
     function renderInlineMarkdown(value) {
@@ -141,6 +200,64 @@
         return blocks.join("");
     }
 
+    function renderScenarioSuggestions(value, scenarios = []) {
+        const content = String(value || "").trim();
+        state.latestScenarioSuggestions = content;
+        state.latestScenarioItems = Array.isArray(scenarios) ? scenarios : [];
+        if (!content) {
+            scenarioSuggestionsNode.innerHTML = '<div class="empty-state">Scenario suggestions will appear here for the active topic.</div>';
+            return;
+        }
+
+        if (!state.latestScenarioItems.length) {
+            scenarioSuggestionsNode.innerHTML = `<div class="enrichment">${renderEnrichmentMarkdown(content)}</div>`;
+            return;
+        }
+
+        scenarioSuggestionsNode.innerHTML = state.latestScenarioItems
+            .map((scenario, index) => `
+                <article class="scenario-suggestion-item">
+                    <div class="scenario-head">
+                        <div>
+                            <h4>${escapeHtml(scenario.title)}</h4>
+                        </div>
+                        <span class="priority priority-${escapeHtml(scenario.priority)}">${escapeHtml(scenario.priority)}</span>
+                    </div>
+                    <div class="scenario-body">
+                        <p>${escapeHtml(scenario.description || "No description provided.")}</p>
+                        <div>
+                            <span class="scenario-section-title">Test Steps</span>
+                            ${scenario.steps ? `<ul>${scenario.steps.split("\n").filter(Boolean).map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>` : "<p>-</p>"}
+                        </div>
+                        <div>
+                            <span class="scenario-section-title">Expected Result</span>
+                            ${scenario.expected_result ? `<ul>${scenario.expected_result.split("\n").filter(Boolean).map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>` : "<p>-</p>"}
+                        </div>
+                    </div>
+                    <div class="item-actions">
+                        <button type="button" class="primary-button small" data-add-scenario="${index}">Add Scenario</button>
+                    </div>
+                </article>
+            `)
+            .join("");
+    }
+
+    async function refreshScenarioCount() {
+        if (!(scenarioCount instanceof HTMLElement)) {
+            return;
+        }
+        try {
+            const response = await fetch("/scenarios");
+            if (!response.ok) {
+                return;
+            }
+            const scenarios = await response.json();
+            scenarioCount.textContent = String(scenarios.length);
+        } catch (_error) {
+            // Ignore metric refresh failures in the discussions panel.
+        }
+    }
+
     function isNearBottom(container, threshold = 32) {
         return container.scrollHeight - container.scrollTop - container.clientHeight <= threshold;
     }
@@ -210,10 +327,10 @@
         const shouldStickToBottom = stickToBottom || isNearBottom(messageList);
 
         messageList.innerHTML = state.messages
-            .map((message) => `
+            .map((message, index) => `
                 <article class="message">
                     <div class="message-head">
-                        <h4>Message #${message.id}</h4>
+                        <h4>Message #${index + 1}</h4>
                         <span class="message-meta">${formatDate(message.created_at)}</span>
                     </div>
                     <div class="message-copy">${escapeHtml(message.content)}</div>
@@ -271,6 +388,8 @@
         state.activeTopicId = topicId;
         const topic = state.topics.find((item) => item.id === topicId);
         activeTopicTitle.textContent = topic ? topic.title : "Select or create a topic";
+        renderScenarioSuggestions("", []);
+        setScenarioSuggestionsStatus("");
         renderTopics();
         await loadMessages({stickToBottom: true});
     }
@@ -325,6 +444,55 @@
         }
     }
 
+    async function generateScenarioSuggestions() {
+        if (!state.activeTopicId) {
+            setScenarioSuggestionsStatus("Create or select a topic first.", true);
+            return;
+        }
+
+        setScenarioSuggestionsStatus("Generating scenarios...");
+        try {
+            const response = await fetch(`/topics/${state.activeTopicId}/scenario-suggestions`, {
+                method: "POST",
+            });
+            if (!response.ok) {
+                const problem = await response.json().catch(() => ({}));
+                throw new Error(problem.detail || "Unable to generate scenarios.");
+            }
+            const payload = await response.json();
+            renderScenarioSuggestions(payload.content, payload.scenarios || []);
+            setScenarioSuggestionsStatus("Scenario suggestions generated.");
+        } catch (error) {
+            setScenarioSuggestionsStatus(error.message || "Unable to generate scenarios.", true);
+        }
+    }
+
+    async function addScenarioByIndex(index) {
+        const scenario = state.latestScenarioItems[index];
+        if (!scenario) {
+            setScenarioSuggestionsStatus("Scenario suggestion is unavailable.", true);
+            return;
+        }
+        setScenarioSuggestionsStatus("Saving scenario...");
+        try {
+            const response = await fetch("/scenarios", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(scenario),
+            });
+            if (!response.ok) {
+                const problem = await response.json().catch(() => ({}));
+                throw new Error(problem.detail || "Unable to save scenario.");
+            }
+            state.latestScenarioItems = state.latestScenarioItems.filter((_, itemIndex) => itemIndex !== index);
+            renderScenarioSuggestions(state.latestScenarioSuggestions, state.latestScenarioItems);
+            await refreshScenarioCount();
+            setScenarioSuggestionsStatus("Scenario saved.");
+        } catch (error) {
+            setScenarioSuggestionsStatus(error.message || "Unable to save scenario.", true);
+        }
+    }
+
     topicList.addEventListener("click", async (event) => {
         const target = event.target;
         if (!(target instanceof HTMLElement)) {
@@ -341,8 +509,34 @@
         await selectTopic(topicId);
     });
 
+    scenarioSuggestionsNode?.addEventListener("click", async (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) {
+            return;
+        }
+        const button = target.closest("[data-add-scenario]");
+        if (!(button instanceof HTMLElement)) {
+            return;
+        }
+        const index = Number(button.dataset.addScenario);
+        if (Number.isNaN(index)) {
+            return;
+        }
+        await addScenarioByIndex(index);
+    });
+
     refreshButton.addEventListener("click", async () => {
         await Promise.all([loadTopics(), loadMessages()]);
+    });
+
+    generateScenariosButton?.addEventListener("click", generateScenarioSuggestions);
+
+    scenarioSuggestionsToggle?.addEventListener("click", () => {
+        if (!(scenarioSuggestionsCard instanceof HTMLElement)) {
+            return;
+        }
+        const isCollapsed = !scenarioSuggestionsCard.classList.contains("is-collapsed");
+        setCollapsedState(scenarioSuggestionsCard, scenarioSuggestionsToggle, isCollapsed);
     });
 
     panelToggleButton?.addEventListener("click", () => {
@@ -364,5 +558,6 @@
     }, 4000);
 
     setCollapsedState(panelNode, panelToggleButton, true);
+    setCollapsedState(scenarioSuggestionsCard, scenarioSuggestionsToggle, false);
     loadTopics();
 })();

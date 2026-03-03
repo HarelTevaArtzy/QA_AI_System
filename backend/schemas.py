@@ -91,3 +91,20 @@ class MessageRead(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ScenarioSuggestionsRead(BaseModel):
+    content: str
+    scenarios: list[ScenarioCreate] = Field(default_factory=list)
+
+
+class ScenarioSuggestionsCreate(BaseModel):
+    content: str = Field(..., min_length=1)
+
+    @field_validator("content")
+    @classmethod
+    def normalize_content(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("Scenario suggestions must not be empty.")
+        return normalized

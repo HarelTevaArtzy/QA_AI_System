@@ -37,8 +37,11 @@ class QAAnalystAgent:
             instructions=[
                 "Analyze the newest message in the context of the topic history.",
                 "Use tools when they help ground the answer in stored project knowledge.",
-                "Respond with short markdown sections: Summary, Risks, Test Ideas, Best Practices.",
+                "Respond with short markdown sections in this order: Summary, Test Type Classification, Risks, Test Ideas, Best Practices, Related Scenarios, QA Heuristics.",
                 "Your output must begin with exactly '## Summary'.",
+                "Always include a '## Test Type Classification' section using only these labels when relevant: functional, regression, performance, security.",
+                "Always include a '## Related Scenarios' section. If there are none, state that clearly.",
+                "Always include a '## QA Heuristics' section.",
                 "Do not include tool-call descriptions, reasoning, JSON, or setup text before the markdown sections.",
                 "Suggest concrete QA scenarios and edge cases whenever possible.",
                 "Do not invent product behavior that is not implied by the discussion.",

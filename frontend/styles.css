@@ -15,7 +15,9 @@
     --radius-lg: 28px;
     --radius-md: 18px;
     --radius-sm: 12px;
-    --discussion-card-height: clamp(560px, 70vh, 720px);
+    --discussion-card-height: clamp(700px, 82vh, 900px);
+    --scenario-library-height: clamp(500px, 62vh, 720px);
+    --scenario-suggestions-height: clamp(180px, 24vh, 260px);
 }
 
 * {
@@ -198,6 +200,13 @@ body::before {
     margin-bottom: 18px;
 }
 
+.card-heading-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
 label {
     display: grid;
     gap: 8px;
@@ -351,6 +360,13 @@ button:hover {
     gap: 12px;
 }
 
+.scenario-list {
+    max-height: var(--scenario-library-height);
+    overflow: auto;
+    padding-right: 6px;
+    align-content: start;
+}
+
 .scenario-item,
 .topic-item,
 .message {
@@ -482,7 +498,7 @@ button:hover {
 
 .chat-card {
     display: grid;
-    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-rows: auto minmax(0, 2fr) auto auto;
     height: var(--discussion-card-height);
     min-height: 0;
     overflow: hidden;
@@ -589,6 +605,43 @@ button:hover {
     margin-top: 18px;
 }
 
+.scenario-suggestions-card {
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    min-height: 0;
+    margin-top: 18px;
+}
+
+.scenario-suggestions-card.is-collapsed {
+    grid-template-rows: auto;
+}
+
+.scenario-suggestion-actions {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+}
+
+.scenario-suggestions-list {
+    min-height: 0;
+    max-height: var(--scenario-suggestions-height);
+    overflow: auto;
+    padding-right: 6px;
+    display: grid;
+    gap: 12px;
+    align-content: start;
+}
+
+.scenario-suggestion-item {
+    border-radius: 16px;
+    border: 1px solid var(--line);
+    background: var(--surface-strong);
+    padding: 18px;
+}
+
 .message-actions {
     display: flex;
     justify-content: space-between;
@@ -653,6 +706,10 @@ button:hover {
 
     .panel-heading-actions {
         justify-content: stretch;
+    }
+
+    .scenario-suggestion-actions {
+        align-items: stretch;
     }
 
     .chat-card {

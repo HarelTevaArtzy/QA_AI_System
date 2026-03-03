@@ -107,7 +107,10 @@
                 <div class="card list-card">
                     <div class="card-heading">
                         <h3>Scenario Library</h3>
-                        <span class="pill" id="scenario-list-count">0 items</span>
+                        <div class="card-heading-actions">
+                            <button type="button" class="ghost-button small" id="scenario-refresh">Refresh</button>
+                            <span class="pill" id="scenario-list-count">0 items</span>
+                        </div>
                     </div>
                     <div id="scenario-list" class="scenario-list"></div>
                 </div>
@@ -180,6 +183,31 @@
                             <button type="submit" class="primary-button">Post Message</button>
                         </div>
                     </form>
+
+                    <div class="scenario-suggestions-card collapsible-card" id="scenario-suggestions-card">
+                        <div class="scenario-suggestion-actions">
+                            <button type="button" class="ghost-button" id="generate-scenarios">Generate Scenarios</button>
+                            <button
+                                type="button"
+                                class="ghost-button collapse-toggle"
+                                id="scenario-suggestions-toggle"
+                                aria-expanded="true"
+                                aria-controls="scenario-suggestions-body"
+                            >
+                                <span class="collapse-toggle-label">Collapse</span>
+                                <span class="collapse-toggle-icon" aria-hidden="true">-</span>
+                            </button>
+                        </div>
+                        <div class="sidebar-body" id="scenario-suggestions-body">
+                            <div class="card-heading">
+                                <h3>Scenario Suggestions</h3>
+                            </div>
+                            <p class="form-status" id="scenario-suggestions-status"></p>
+                            <div id="scenario-suggestions" class="scenario-suggestions-list">
+                                Scenario suggestions will appear here for the active topic.
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 </div>
             </div>

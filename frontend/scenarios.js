@@ -14,6 +14,7 @@
     const resetButton = document.getElementById("scenario-reset");
     const exportExcelButton = document.getElementById("export-excel");
     const exportWordButton = document.getElementById("export-word");
+    const refreshLibraryButton = document.getElementById("scenario-refresh");
     const panelNode = document.querySelector(".panel-scenarios");
     const panelToggleButton = document.getElementById("scenario-panel-toggle");
 
@@ -227,6 +228,12 @@
 
     exportWordButton.addEventListener("click", () => {
         window.open("/export/scenarios/word", "_blank", "noopener");
+    });
+
+    refreshLibraryButton?.addEventListener("click", async () => {
+        setStatus("Refreshing scenarios...");
+        await loadScenarios();
+        setStatus("Scenario library refreshed.");
     });
 
     panelToggleButton?.addEventListener("click", () => {

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from sqlalchemy import select
+from sqlalchemy import case, select
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
@@ -23,7 +23,14 @@ def create_scenario(payload: ScenarioCreate, db: Session = Depends(get_db)) -> S
 
 @router.get("", response_model=list[ScenarioRead])
 def list_scenarios(db: Session = Depends(get_db)) -> list[Scenario]:
-    stmt = select(Scenario).order_by(Scenario.created_at.desc(), Scenario.id.desc())
+    priority_rank = case(
+        (Scenario.priority == "critical", 0),
+        (Scenario.priority == "high", 1),
+        (Scenario.priority == "medium", 2),
+        (Scenario.priority == "low", 3),
+        else_=4,
+    )
+    stmt = select(Scenario).order_by(priority_rank.asc(), Scenario.created_at.desc(), Scenario.id.desc())
     return list(db.scalars(stmt).all())
 
 
