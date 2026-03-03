@@ -3,7 +3,11 @@ from __future__ import annotations
 import os
 import re
 import uuid
+from io import BytesIO
 from pathlib import Path
+
+from docx import Document
+from openpyxl import load_workbook
 
 
 TEST_DB_FILE = Path(__file__).resolve().parent / f"test-{uuid.uuid4().hex}.db"
@@ -25,15 +29,25 @@ def teardown_module() -> None:
 
 def test_scenario_crud_and_exports() -> None:
     with TestClient(app) as client:
-        payload = {
+        critical_payload = {
             "title": "Checkout blocks duplicate payment",
             "description": "Regression coverage for duplicate payment retries.",
             "steps": "Open checkout\nSubmit payment\nClick submit again",
             "expected_result": "Second submission is blocked\nNo duplicate charge occurs",
             "priority": "critical",
         }
+        high_payload = {
+            **critical_payload,
+            "title": "Login redirect regression",
+            "priority": "high",
+        }
+        low_payload = {
+            **critical_payload,
+            "title": "Minor UI typo",
+            "priority": "low",
+        }
 
-        created = client.post("/scenarios", json=payload)
+        created = client.post("/scenarios", json=critical_payload)
         assert created.status_code == 201
         scenario_id = created.json()["id"]
 
@@ -41,40 +55,50 @@ def test_scenario_crud_and_exports() -> None:
         assert listed.status_code == 200
         assert len(listed.json()) == 1
 
-        lower_priority = client.post(
-            "/scenarios",
-            json={
-                **payload,
-                "title": "Minor UI typo",
-                "priority": "low",
-            },
-        )
+        higher_priority = client.post("/scenarios", json=high_payload)
+        assert higher_priority.status_code == 201
+
+        lower_priority = client.post("/scenarios", json=low_payload)
         assert lower_priority.status_code == 201
 
         ordered = client.get("/scenarios")
         assert ordered.status_code == 200
         ordered_payload = ordered.json()
         assert ordered_payload[0]["priority"] == "critical"
+        assert ordered_payload[1]["priority"] == "high"
         assert ordered_payload[-1]["priority"] == "low"
 
         updated = client.put(
             f"/scenarios/{scenario_id}",
-            json={**payload, "priority": "high"},
+            json=critical_payload,
         )
         assert updated.status_code == 200
-        assert updated.json()["priority"] == "high"
+        assert updated.json()["priority"] == "critical"
 
         excel = client.get("/export/scenarios/excel")
         assert excel.status_code == 200
         assert excel.headers["content-type"].startswith(
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
+        workbook = load_workbook(BytesIO(excel.content))
+        sheet = workbook.active
+        excel_priorities = [sheet[f"F{row}"].value for row in range(2, 5)]
+        assert excel_priorities == ["Critical", "High", "Low"]
 
         word = client.get("/export/scenarios/word")
         assert word.status_code == 200
         assert word.headers["content-type"].startswith(
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
+        document = Document(BytesIO(word.content))
+        exported_titles = [
+            paragraph.text for paragraph in document.paragraphs if paragraph.style.name == "Heading 1"
+        ]
+        assert exported_titles[:3] == [
+            "1. Checkout blocks duplicate payment",
+            "2. Login redirect regression",
+            "3. Minor UI typo",
+        ]
 
 
 def test_discussion_storage_and_enrichment_fallback() -> None:
