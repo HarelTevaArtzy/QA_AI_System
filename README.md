@@ -26,8 +26,10 @@ frontend/
   styles.css
   scenarios.js
   discussions.js
+tests/
 main.py
 requirements.txt
+qa_system.db
 ```
 
 ## Run
