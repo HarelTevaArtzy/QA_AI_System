@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import uuid
 from pathlib import Path
 
@@ -116,11 +117,18 @@ def test_discussion_storage_and_enrichment_fallback() -> None:
         assert payload[0]["enriched_content"]
         assert payload[0]["enriched_content"].startswith("## Summary")
         assert "Fallback enrichment used" not in payload[0]["enriched_content"]
-        assert "## Test Type Classification" in payload[0]["enriched_content"]
+        assert "## Test Type Classification" not in payload[0]["enriched_content"]
+        assert "## Test Ideas" in payload[0]["enriched_content"]
+        assert " - functional" in payload[0]["enriched_content"]
+        test_ideas_match = re.search(
+            r"(?ms)^## Test Ideas\s*(.*?)(?=^##\s|\Z)",
+            payload[0]["enriched_content"],
+        )
+        assert test_ideas_match is not None
+        assert "[" not in test_ideas_match.group(1)
         assert "## Related Scenarios" in payload[0]["enriched_content"]
         assert "## QA Heuristics" in payload[0]["enriched_content"]
         assert payload[0]["enriched_content"].count("## QA Heuristics") == 1
-        assert "- functional" in payload[0]["enriched_content"]
         assert "Login redirects to homepage" in payload[0]["enriched_content"]
 
 

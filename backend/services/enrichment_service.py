@@ -17,8 +17,6 @@ from backend.services.agno_agents.qa_agent import (
 class EnrichmentService:
     SECTION_TITLE_ALIASES = {
         "summary": "Summary",
-        "suggested test types": "Test Type Classification",
-        "test type classification": "Test Type Classification",
         "risks": "Risks",
         "risks to probe": "Risks",
         "test ideas": "Test Ideas",
@@ -30,7 +28,6 @@ class EnrichmentService:
     }
     SECTION_ORDER = [
         "Summary",
-        "Test Type Classification",
         "Risks",
         "Test Ideas",
         "Best Practices",
@@ -92,14 +89,11 @@ class EnrichmentService:
             f"This discussion appears to focus on **{topic.title}**.",
             db_message.content,
             "",
-            "## Test Type Classification",
-            self._format_test_types(test_types),
-            "",
             "## Risks To Probe",
             "\n".join(f"- {risk}" for risk in risks),
             "",
             "## Candidate Scenario Ideas",
-            "\n".join(f"- {idea}" for idea in scenario_ideas),
+            self._format_test_ideas(scenario_ideas, db_message.content, test_types),
             "",
             "## Best Practices",
             "- Verify preconditions, permissions, and environment setup.",
@@ -122,8 +116,11 @@ class EnrichmentService:
         normalized = self._normalize_sections(normalize_enrichment_markdown(content))
         normalized = self._upsert_section(
             normalized,
-            "Test Type Classification",
-            self._format_test_types(self._classify_test_types(db_message.content)),
+            "Test Ideas",
+            self._format_test_ideas(
+                self._existing_or_fallback_test_ideas(normalized, db_message.content),
+                db_message.content,
+            ),
         )
         normalized = self._upsert_section(
             normalized,
@@ -172,6 +169,24 @@ class EnrichmentService:
             if title in section_map
         ]
         return "\n\n".join(ordered_sections).strip()
+
+    @staticmethod
+    def _section_body(content: str, title: str) -> str | None:
+        pattern = re.compile(
+            rf"(?ims)^##\s*{re.escape(title)}\b\s*(.*?)(?=^##\s|\Z)"
+        )
+        match = pattern.search(content)
+        if not match:
+            return None
+        body = match.group(1).strip()
+        return body or None
+
+    def _existing_or_fallback_test_ideas(
+        self, content: str, source_content: str
+    ) -> list[str]:
+        existing_body = self._section_body(content, "Test Ideas")
+        extracted = self._extract_test_ideas(existing_body) if existing_body else []
+        return extracted or self._scenario_ideas(source_content)
 
     def _topic_history(self, topic_id: int, current_message_id: int) -> str:
         with SessionLocal() as db:
@@ -244,8 +259,51 @@ class EnrichmentService:
         return labels
 
     @staticmethod
-    def _format_test_types(test_types: list[str]) -> str:
-        return "\n".join(f"- {test_type}" for test_type in test_types)
+    def _extract_test_ideas(body: str | None) -> list[str]:
+        if not body:
+            return []
+        items: list[str] = []
+        for line in body.splitlines():
+            stripped = line.strip()
+            if not stripped:
+                continue
+            bullet_match = re.match(r"^(?:[-*]|\d+\.)\s+(.+)$", stripped)
+            items.append((bullet_match.group(1) if bullet_match else stripped).strip())
+        return [item for item in items if item]
+
+    @staticmethod
+    def _normalize_test_idea_text(idea: str) -> str:
+        normalized = idea.strip()
+        normalized = re.sub(
+            r"\s*-\s*\[(?:functional|regression|performance|security)(?:\s*,\s*(?:functional|regression|performance|security))*\]\s*$",
+            "",
+            normalized,
+            flags=re.IGNORECASE,
+        )
+        normalized = re.sub(
+            r"\s*-\s*(?:functional|regression|performance|security)(?:\s*,\s*(?:functional|regression|performance|security))*\s*$",
+            "",
+            normalized,
+            flags=re.IGNORECASE,
+        )
+        return normalized.strip()
+
+    def _format_test_ideas(
+        self,
+        ideas: list[str],
+        source_content: str,
+        baseline_types: list[str] | None = None,
+    ) -> str:
+        baseline = baseline_types or self._classify_test_types(source_content)
+        lines: list[str] = []
+        for index, idea in enumerate(ideas, start=1):
+            normalized_idea = self._normalize_test_idea_text(idea)
+            idea_types = self._classify_test_types(f"{source_content} {normalized_idea}")
+            relevant_types = [test_type for test_type in idea_types if test_type in baseline]
+            if not relevant_types:
+                relevant_types = ["functional"]
+            lines.append(f"{index}. {normalized_idea} - {', '.join(relevant_types)}")
+        return "\n".join(lines)
 
     @staticmethod
     def _scenario_ideas(content: str) -> list[str]:
