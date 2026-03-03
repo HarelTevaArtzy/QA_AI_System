@@ -496,6 +496,8 @@ button:hover {
 }
 
 .topic-list {
+    align-content: start;
+    grid-auto-rows: max-content;
     min-height: 0;
     overflow: auto;
     padding-right: 6px;
@@ -518,7 +520,61 @@ button:hover {
     background: rgba(45, 118, 111, 0.08);
     border: 1px solid rgba(45, 118, 111, 0.12);
     color: #173f3b;
-    white-space: pre-wrap;
+    line-height: 1.6;
+}
+
+.enrichment > :first-child {
+    margin-top: 0;
+}
+
+.enrichment > :last-child {
+    margin-bottom: 0;
+}
+
+.enrichment h1,
+.enrichment h2,
+.enrichment h3,
+.enrichment h4,
+.enrichment h5,
+.enrichment h6 {
+    margin: 1rem 0 0.5rem;
+    color: #11403b;
+    font-family: "Space Grotesk", sans-serif;
+    letter-spacing: -0.02em;
+}
+
+.enrichment h2 {
+    font-size: 1rem;
+}
+
+.enrichment h3 {
+    font-size: 0.95rem;
+}
+
+.enrichment p {
+    margin: 0.65rem 0;
+}
+
+.enrichment ul,
+.enrichment ol {
+    margin: 0.65rem 0;
+    padding-left: 1.2rem;
+}
+
+.enrichment li + li {
+    margin-top: 0.3rem;
+}
+
+.enrichment strong {
+    color: #0f332f;
+}
+
+.enrichment code {
+    padding: 0.08rem 0.35rem;
+    border-radius: 999px;
+    background: rgba(17, 64, 59, 0.1);
+    font-size: 0.9em;
+    font-family: "Consolas", "Courier New", monospace;
 }
 
 .enrichment.pending {
@@ -604,7 +660,7 @@ button:hover {
     }
 
     .sidebar-card {
-        height: auto;
+        height: min(68vh, 620px);
     }
 
     .sidebar-body,

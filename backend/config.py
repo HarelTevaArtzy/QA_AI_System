@@ -15,7 +15,6 @@ class Settings:
     agno_provider: str
     agno_model: str
     agno_base_url: str | None
-    openai_api_key: str | None
     sync_enrichment: bool
 
 
@@ -36,7 +35,6 @@ def get_settings() -> Settings:
         agno_provider=os.getenv("AGNO_PROVIDER", "ollama").strip().lower(),
         agno_model=os.getenv("AGNO_MODEL", "llama3.1:8b"),
         agno_base_url=os.getenv("AGNO_BASE_URL"),
-        openai_api_key=os.getenv("OPENAI_API_KEY"),
         sync_enrichment=os.getenv("SYNC_ENRICHMENT", "false").lower()
         in {"1", "true", "yes"},
     )

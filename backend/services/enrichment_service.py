@@ -7,7 +7,10 @@ from sqlalchemy import select
 from backend.config import get_settings
 from backend.database import SessionLocal
 from backend.models import Message, Topic
-from backend.services.agno_agents.qa_agent import QAAnalystAgent
+from backend.services.agno_agents.qa_agent import (
+    QAAnalystAgent,
+    normalize_enrichment_markdown,
+)
 
 
 class EnrichmentService:
@@ -33,12 +36,16 @@ class EnrichmentService:
 
     def _generate_enrichment(self, db_message: Message, topic: Topic) -> str:
         try:
-            return QAAnalystAgent(
-                db=self._session_from_message(db_message),
-                topic_id=topic.id,
-            ).enrich(db_message.content)
+            return normalize_enrichment_markdown(
+                QAAnalystAgent(
+                    db=self._session_from_message(db_message),
+                    topic_id=topic.id,
+                ).enrich(db_message.content)
+            )
         except Exception as exc:
-            return self._fallback_enrichment(db_message, topic, reason=str(exc))
+            return normalize_enrichment_markdown(
+                self._fallback_enrichment(db_message, topic, reason=str(exc))
+            )
 
     @staticmethod
     def _session_from_message(db_message: Message):
@@ -51,14 +58,7 @@ class EnrichmentService:
         test_types = self._classify_test_types(db_message.content)
         scenario_ideas = self._scenario_ideas(db_message.content)
         risks = self._risk_prompts(db_message.content)
-        note = (
-            f"_Fallback enrichment used because Agno/{self.settings.agno_provider} was unavailable: {reason}_\n\n"
-            if reason
-            else f"_Fallback enrichment used because Agno/{self.settings.agno_provider} is disabled._\n\n"
-        )
-
         parts = [
-            note,
             "## Summary",
             f"This discussion appears to focus on **{topic.title}**.",
             db_message.content,

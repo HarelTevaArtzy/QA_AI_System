@@ -31,16 +31,6 @@ def build_model(settings: Settings) -> Model:
             kwargs["base_url"] = settings.agno_base_url
         return LMStudio(**kwargs)
 
-    if provider == "openai":
-        from agno.models.openai import OpenAIChat
-
-        kwargs = {"id": settings.agno_model}
-        if settings.openai_api_key:
-            kwargs["api_key"] = settings.openai_api_key
-        if settings.agno_base_url:
-            kwargs["base_url"] = settings.agno_base_url
-        return OpenAIChat(**kwargs)
-
     raise ValueError(
-        f"Unsupported AGNO_PROVIDER '{settings.agno_provider}'. Use ollama, lmstudio, openai, or disabled."
+        f"Unsupported AGNO_PROVIDER '{settings.agno_provider}'. Use ollama, lmstudio, or disabled."
     )

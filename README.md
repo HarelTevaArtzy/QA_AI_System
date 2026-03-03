@@ -43,7 +43,7 @@ Open `http://127.0.0.1:8000`.
 
 ## Ollama Setup
 
-The default agent backend is `Agno + Ollama`, not OpenAI.
+The default agent backend is `Agno + Ollama`.
 
 1. Install Ollama locally.
 2. Pull a model:
@@ -92,5 +92,4 @@ Supported providers are:
 
 - `ollama` for local Ollama models
 - `lmstudio` for a local LM Studio server
-- `openai` if you later want a hosted model
 - `disabled` for forced fallback mode

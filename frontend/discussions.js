@@ -44,6 +44,107 @@
         return new Date(value).toLocaleString();
     }
 
+    function sanitizeEnrichmentContent(value) {
+        const content = String(value || "").trim();
+        const summaryMatch = content.match(/^##\s*summary\b/im);
+        if (!summaryMatch || typeof summaryMatch.index !== "number") {
+            return content;
+        }
+        return content.slice(summaryMatch.index).trim();
+    }
+
+    function renderInlineMarkdown(value) {
+        return escapeHtml(value)
+            .replace(/`([^`]+)`/g, "<code>$1</code>")
+            .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+            .replace(/\*([^*]+)\*/g, "<em>$1</em>");
+    }
+
+    function renderEnrichmentMarkdown(value) {
+        const content = sanitizeEnrichmentContent(value);
+        if (!content) {
+            return "";
+        }
+
+        const lines = content.split(/\r?\n/);
+        const blocks = [];
+        let paragraphLines = [];
+        let listItems = [];
+        let listTag = "";
+
+        function flushParagraph() {
+            if (!paragraphLines.length) {
+                return;
+            }
+            blocks.push(`<p>${renderInlineMarkdown(paragraphLines.join(" "))}</p>`);
+            paragraphLines = [];
+        }
+
+        function flushList() {
+            if (!listItems.length || !listTag) {
+                listItems = [];
+                listTag = "";
+                return;
+            }
+            const items = listItems.map((item) => `<li>${renderInlineMarkdown(item)}</li>`).join("");
+            blocks.push(`<${listTag}>${items}</${listTag}>`);
+            listItems = [];
+            listTag = "";
+        }
+
+        for (const line of lines) {
+            const trimmed = line.trim();
+
+            if (!trimmed) {
+                flushParagraph();
+                flushList();
+                continue;
+            }
+
+            const headingMatch = trimmed.match(/^(#{1,6})\s+(.+)$/);
+            if (headingMatch) {
+                flushParagraph();
+                flushList();
+                const level = Math.min(headingMatch[1].length, 6);
+                blocks.push(`<h${level}>${renderInlineMarkdown(headingMatch[2])}</h${level}>`);
+                continue;
+            }
+
+            const orderedMatch = trimmed.match(/^\d+\.\s+(.+)$/);
+            if (orderedMatch) {
+                flushParagraph();
+                if (listTag && listTag !== "ol") {
+                    flushList();
+                }
+                listTag = "ol";
+                listItems.push(orderedMatch[1]);
+                continue;
+            }
+
+            const unorderedMatch = trimmed.match(/^[-*]\s+(.+)$/);
+            if (unorderedMatch) {
+                flushParagraph();
+                if (listTag && listTag !== "ul") {
+                    flushList();
+                }
+                listTag = "ul";
+                listItems.push(unorderedMatch[1]);
+                continue;
+            }
+
+            flushList();
+            paragraphLines.push(trimmed);
+        }
+
+        flushParagraph();
+        flushList();
+        return blocks.join("");
+    }
+
+    function isNearBottom(container, threshold = 32) {
+        return container.scrollHeight - container.scrollTop - container.clientHeight <= threshold;
+    }
+
     function updateMetrics() {
         topicCount.textContent = String(state.topics.length);
         const enrichedMessages = state.topics.reduce(
@@ -93,7 +194,8 @@
             .join("");
     }
 
-    function renderMessages() {
+    function renderMessages(options = {}) {
+        const {stickToBottom = false} = options;
         updateMetrics();
         if (!state.activeTopicId) {
             messageList.innerHTML = '<div class="empty-state">Choose a topic to view its conversation history.</div>';
@@ -103,6 +205,9 @@
             messageList.innerHTML = '<div class="empty-state">No messages in this topic yet. Post one to trigger enrichment.</div>';
             return;
         }
+
+        const distanceFromBottom = messageList.scrollHeight - messageList.scrollTop;
+        const shouldStickToBottom = stickToBottom || isNearBottom(messageList);
 
         messageList.innerHTML = state.messages
             .map((message) => `
@@ -114,13 +219,19 @@
                     <div class="message-copy">${escapeHtml(message.content)}</div>
                     <div class="enrichment ${message.enriched_content ? "" : "pending"}">${
                         message.enriched_content
-                            ? escapeHtml(message.enriched_content)
+                            ? renderEnrichmentMarkdown(message.enriched_content)
                             : "AI enrichment is queued. Refresh in a few seconds."
                     }</div>
                 </article>
             `)
             .join("");
-        messageList.scrollTop = messageList.scrollHeight;
+
+        if (shouldStickToBottom) {
+            messageList.scrollTop = messageList.scrollHeight;
+            return;
+        }
+
+        messageList.scrollTop = Math.max(0, messageList.scrollHeight - distanceFromBottom);
     }
 
     async function loadTopics() {
@@ -140,7 +251,7 @@
         }
     }
 
-    async function loadMessages() {
+    async function loadMessages(options = {}) {
         if (!state.activeTopicId) {
             return;
         }
@@ -150,7 +261,7 @@
                 throw new Error("Unable to load messages.");
             }
             state.messages = await response.json();
-            renderMessages();
+            renderMessages(options);
         } catch (error) {
             setMessageStatus(error.message || "Unable to load messages.", true);
         }
@@ -161,7 +272,7 @@
         const topic = state.topics.find((item) => item.id === topicId);
         activeTopicTitle.textContent = topic ? topic.title : "Select or create a topic";
         renderTopics();
-        await loadMessages();
+        await loadMessages({stickToBottom: true});
     }
 
     async function createTopic(event) {
@@ -208,7 +319,7 @@
             }
             messageInput.value = "";
             setMessageStatus("Message posted. Enrichment is running.");
-            await Promise.all([loadTopics(), loadMessages()]);
+            await Promise.all([loadTopics(), loadMessages({stickToBottom: true})]);
         } catch (error) {
             setMessageStatus(error.message || "Unable to post message.", true);
         }

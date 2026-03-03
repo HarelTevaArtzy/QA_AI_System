@@ -85,3 +85,5 @@ def test_discussion_storage_and_enrichment_fallback() -> None:
         payload = messages.json()
         assert len(payload) == 1
         assert payload[0]["enriched_content"]
+        assert payload[0]["enriched_content"].startswith("## Summary")
+        assert "Fallback enrichment used" not in payload[0]["enriched_content"]
