@@ -27,6 +27,8 @@ def get_db() -> Generator[Session, None, None]:
 
 
 def init_db() -> None:
-    from backend.models import discussion, scenario  # noqa: F401
+    from backend.models import discussion, requirement, scenario, user  # noqa: F401
+    from backend.security import ensure_default_admin
 
     Base.metadata.create_all(bind=engine)
+    ensure_default_admin()

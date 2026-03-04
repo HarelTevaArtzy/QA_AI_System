@@ -15,9 +15,10 @@
     --radius-lg: 28px;
     --radius-md: 18px;
     --radius-sm: 12px;
-    --discussion-card-height: clamp(700px, 82vh, 900px);
-    --scenario-library-height: clamp(500px, 62vh, 720px);
-    --scenario-suggestions-height: clamp(180px, 24vh, 260px);
+    --tab-panel-min-height: clamp(980px, 88vh, 1320px);
+    --discussion-card-height: clamp(1040px, 88vh, 1360px);
+    --scenario-library-height: clamp(760px, 76vh, 1080px);
+    --scenario-suggestions-height: clamp(280px, 34vh, 420px);
 }
 
 * {
@@ -57,7 +58,7 @@ body::before {
     display: grid;
     grid-template-columns: 1.6fr 1fr;
     gap: 24px;
-    margin-bottom: 28px;
+    margin-bottom: 24px;
     padding: 32px;
     background: linear-gradient(145deg, rgba(255, 250, 242, 0.92), rgba(247, 238, 225, 0.82));
     border: 1px solid rgba(177, 65, 46, 0.15);
@@ -116,8 +117,15 @@ body::before {
 
 .hero-metrics {
     display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 14px;
     align-content: center;
+}
+
+.hero-side {
+    display: grid;
+    gap: 18px;
+    align-content: start;
 }
 
 .metric-card {
@@ -139,9 +147,41 @@ body::before {
     font-size: 2rem;
 }
 
+.workspace-tabs {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding: 12px;
+    border-radius: 999px;
+    background: rgba(255, 250, 242, 0.7);
+    border: 1px solid rgba(177, 65, 46, 0.12);
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(12px);
+    overflow-x: auto;
+}
+
+.workspace-tab {
+    flex: 0 0 auto;
+    padding: 12px 18px;
+    border-radius: 999px;
+    border: 1px solid rgba(177, 65, 46, 0.1);
+    background: rgba(177, 65, 46, 0.06);
+    color: var(--accent-dark);
+    font-weight: 700;
+}
+
+.workspace-tab.is-active {
+    color: #fff7f0;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+    border-color: transparent;
+}
+
 .workspace-grid {
     display: grid;
-    gap: 24px;
+}
+
+.tab-panel {
+    min-height: var(--tab-panel-min-height);
 }
 
 .panel {
@@ -171,17 +211,31 @@ body::before {
 }
 
 .scenario-layout,
-.discussion-layout {
+.discussion-layout,
+.requirements-layout {
     display: grid;
     gap: 18px;
 }
 
 .scenario-layout {
-    grid-template-columns: minmax(320px, 430px) 1fr;
+    grid-template-columns: minmax(340px, 430px) 1fr;
 }
 
 .discussion-layout {
-    grid-template-columns: minmax(280px, 340px) 1fr;
+    grid-template-columns: minmax(300px, 360px) 1fr;
+}
+
+.requirements-layout {
+    grid-template-columns: minmax(360px, 420px) 1fr;
+    align-items: stretch;
+}
+
+.requirements-sidebar {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 18px;
+    height: var(--discussion-card-height);
+    min-height: var(--discussion-card-height);
 }
 
 .card {
@@ -189,6 +243,21 @@ body::before {
     border: 1px solid rgba(60, 36, 18, 0.1);
     border-radius: var(--radius-md);
     padding: 20px;
+}
+
+.form-card {
+    align-self: start;
+}
+
+.list-card,
+.sidebar-card,
+.chat-card {
+    min-height: var(--discussion-card-height);
+}
+
+.list-card {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
 }
 
 .card-heading,
@@ -304,12 +373,10 @@ button:hover {
     min-height: 0;
 }
 
-.collapsible-panel.is-collapsed .panel-body,
 .collapsible-card.is-collapsed .sidebar-body {
     display: none;
 }
 
-.collapsible-panel.is-collapsed .panel-heading,
 .collapsible-card.is-collapsed .card-heading {
     margin-bottom: 0;
 }
@@ -355,16 +422,27 @@ button:hover {
 
 .scenario-list,
 .topic-list,
-.message-list {
+.message-list,
+.user-list,
+.requirement-tree,
+.requirement-detail,
+.scenario-suggestions-list {
     display: grid;
     gap: 12px;
-}
-
-.scenario-list {
-    max-height: var(--scenario-library-height);
+    align-content: start;
+    min-height: 0;
     overflow: auto;
     padding-right: 6px;
-    align-content: start;
+}
+
+.scenario-suggestions-list {
+    min-height: var(--scenario-suggestions-height);
+    max-height: var(--scenario-suggestions-height);
+}
+
+.scenario-list,
+.user-list {
+    max-height: var(--scenario-library-height);
 }
 
 .scenario-item,
@@ -390,7 +468,8 @@ button:hover {
 
 .scenario-item h4,
 .topic-item h4,
-.message-head h4 {
+.message-head h4,
+.requirement-detail h3 {
     margin: 0;
     font-family: "Space Grotesk", sans-serif;
     font-size: 1rem;
@@ -449,6 +528,7 @@ button:hover {
     display: flex;
     gap: 8px;
     margin-top: 14px;
+    flex-wrap: wrap;
 }
 
 .item-actions button {
@@ -461,9 +541,119 @@ button:hover {
     grid-template-rows: auto minmax(0, 1fr);
     align-content: stretch;
     gap: 0;
-    height: var(--discussion-card-height);
-    min-height: 0;
     overflow: hidden;
+}
+
+.requirement-tree-card,
+.requirement-detail-card {
+    display: grid;
+    gap: 14px;
+    overflow: hidden;
+}
+
+.requirement-tree-card {
+    grid-template-rows: auto minmax(0, 1fr);
+    min-height: 0;
+}
+
+.requirement-detail-card {
+    grid-template-rows: auto minmax(0, 1fr);
+    height: var(--discussion-card-height);
+    min-height: var(--discussion-card-height);
+}
+
+.requirement-detail-flow {
+    display: grid;
+    align-content: start;
+    gap: 18px;
+    min-height: 0;
+    overflow: auto;
+    padding-right: 6px;
+}
+
+.requirement-tree {
+    max-height: none;
+}
+
+.requirement-detail {
+    overflow: visible;
+    padding-right: 0;
+}
+
+.requirement-node {
+    display: grid;
+    gap: 10px;
+}
+
+.requirement-node .requirement-node {
+    padding-left: 16px;
+    border-left: 1px dashed rgba(80, 60, 30, 0.16);
+    margin-left: 10px;
+}
+
+.requirement-item {
+    width: 100%;
+    min-height: 74px;
+}
+
+.detail-stack {
+    display: grid;
+    gap: 16px;
+}
+
+.detail-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.linked-badges,
+.linked-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.linked-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(45, 118, 111, 0.08);
+    color: var(--teal);
+    font-size: 0.86rem;
+    font-weight: 600;
+}
+
+.linked-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    padding: 10px 12px;
+    border: 1px solid rgba(70, 44, 22, 0.16);
+    border-radius: var(--radius-sm);
+    background: rgba(255, 254, 252, 0.92);
+}
+
+.linked-option input {
+    width: auto;
+    margin: 0;
+}
+
+.linked-selector-field {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.mini-list {
+    max-height: 420px;
+}
+
+.compact-card {
+    padding: 14px;
 }
 
 .sidebar-body {
@@ -500,23 +690,11 @@ button:hover {
     display: grid;
     grid-template-rows: auto minmax(0, 2fr) auto auto;
     height: var(--discussion-card-height);
-    min-height: 0;
     overflow: hidden;
 }
 
 .message-list {
-    align-content: start;
-    min-height: 0;
-    overflow: auto;
-    padding-right: 6px;
-}
-
-.topic-list {
-    align-content: start;
-    grid-auto-rows: max-content;
-    min-height: 0;
-    overflow: auto;
-    padding-right: 6px;
+    max-height: calc(var(--discussion-card-height) - var(--scenario-suggestions-height) - 300px);
 }
 
 .message {
@@ -607,9 +785,37 @@ button:hover {
 
 .scenario-suggestions-card {
     display: grid;
-    grid-template-rows: auto auto minmax(0, 1fr);
+    align-content: start;
+    gap: 0;
     min-height: 0;
     margin-top: 18px;
+}
+
+.auth-card {
+    display: grid;
+    gap: 14px;
+}
+
+.auth-form {
+    display: grid;
+    gap: 12px;
+}
+
+.session-view {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    align-items: center;
+}
+
+.session-meta {
+    display: grid;
+    gap: 4px;
+}
+
+.session-meta strong {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 1.1rem;
 }
 
 .scenario-suggestions-card.is-collapsed {
@@ -623,16 +829,6 @@ button:hover {
     gap: 12px;
     margin-bottom: 14px;
     flex-wrap: wrap;
-}
-
-.scenario-suggestions-list {
-    min-height: 0;
-    max-height: var(--scenario-suggestions-height);
-    overflow: auto;
-    padding-right: 6px;
-    display: grid;
-    gap: 12px;
-    align-content: start;
 }
 
 .scenario-suggestion-item {
@@ -657,6 +853,10 @@ button:hover {
     background: rgba(255, 255, 255, 0.35);
 }
 
+.hidden {
+    display: none !important;
+}
+
 .sr-only {
     position: absolute;
     width: 1px;
@@ -672,12 +872,35 @@ button:hover {
 @media (max-width: 1080px) {
     .hero,
     .scenario-layout,
-    .discussion-layout {
+    .discussion-layout,
+    .requirements-layout {
         grid-template-columns: 1fr;
     }
 
     .hero h1 {
         max-width: 100%;
+    }
+
+    .requirements-sidebar,
+    .requirement-tree-card,
+    .requirement-detail-card,
+    .list-card,
+    .sidebar-card,
+    .chat-card {
+        min-height: auto;
+    }
+
+    .requirements-sidebar,
+    .requirement-detail-card {
+        height: auto;
+    }
+
+    .chat-card {
+        height: auto;
+    }
+
+    .message-list {
+        max-height: none;
     }
 }
 
@@ -695,7 +918,9 @@ button:hover {
     .panel-heading,
     .chat-header,
     .card-heading,
-    .message-actions {
+    .message-actions,
+    .detail-actions,
+    .session-view {
         flex-direction: column;
         align-items: stretch;
     }
@@ -712,17 +937,7 @@ button:hover {
         align-items: stretch;
     }
 
-    .chat-card {
-        height: auto;
-    }
-
-    .sidebar-card {
-        height: min(68vh, 620px);
-    }
-
-    .sidebar-body,
-    .message-list,
-    .topic-list {
-        min-height: auto;
+    .workspace-tabs {
+        padding: 10px;
     }
 }

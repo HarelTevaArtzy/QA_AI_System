@@ -22,6 +22,13 @@ def _format_multiline(value: str) -> str:
     return "\n".join(f"{index}. {line}" for index, line in enumerate(lines, start=1))
 
 
+def _format_requirements(scenario: Scenario) -> str:
+    titles = [requirement.title.strip() for requirement in scenario.requirements if requirement.title.strip()]
+    if not titles:
+        return "-"
+    return ", ".join(titles)
+
+
 def build_scenarios_excel(scenarios: list[Scenario]) -> BytesIO:
     workbook = Workbook()
     sheet = workbook.active
@@ -34,6 +41,7 @@ def build_scenarios_excel(scenarios: list[Scenario]) -> BytesIO:
         "Test Steps",
         "Expected Results",
         "Priority",
+        "Requirements",
         "Created At",
     ]
     sheet.append(headers)
@@ -52,11 +60,12 @@ def build_scenarios_excel(scenarios: list[Scenario]) -> BytesIO:
                 _format_multiline(scenario.steps),
                 _format_multiline(scenario.expected_result),
                 scenario.priority.title(),
+                _format_requirements(scenario),
                 scenario.created_at.strftime("%Y-%m-%d %H:%M:%S"),
             ]
         )
 
-    widths = {"A": 8, "B": 28, "C": 42, "D": 52, "E": 42, "F": 14, "G": 22}
+    widths = {"A": 8, "B": 28, "C": 42, "D": 52, "E": 42, "F": 14, "G": 30, "H": 22}
     for column, width in widths.items():
         sheet.column_dimensions[column].width = width
     for row in sheet.iter_rows(min_row=2):
@@ -80,6 +89,7 @@ def build_scenarios_word(scenarios: list[Scenario]) -> BytesIO:
     for scenario in scenarios:
         document.add_heading(f"{scenario.id}. {scenario.title}", level=1)
         document.add_paragraph(f"Priority: {scenario.priority.title()}")
+        document.add_paragraph(f"Requirements: {_format_requirements(scenario)}")
         if scenario.description:
             document.add_paragraph(scenario.description)
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from sqlalchemy import DateTime, String, Text, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.database import Base
 
@@ -19,4 +19,9 @@ class Scenario(Base):
     priority: Mapped[str] = mapped_column(String(20), nullable=False, default="medium", index=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    requirements: Mapped[list["Requirement"]] = relationship(
+        secondary="scenario_requirements",
+        back_populates="scenarios",
+        order_by="Requirement.created_at.asc(), Requirement.id.asc()",
     )

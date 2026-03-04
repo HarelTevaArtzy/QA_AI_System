@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy import case, func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from backend.config import get_settings
 from backend.database import get_db
-from backend.models import Message, Scenario, Topic
+from backend.models import Message, Scenario, Topic, User
 from backend.schemas import (
     MessageCreate,
     MessageRead,
@@ -17,6 +17,7 @@ from backend.schemas import (
     TopicRead,
     TopicSummary,
 )
+from backend.security import get_current_user, require_roles
 from backend.services.agno_agents.scenario_agent import (
     ScenarioGeneratorAgent,
     build_fallback_scenario_suggestions,
@@ -31,7 +32,11 @@ settings = get_settings()
 
 
 @router.post("/topics", response_model=TopicRead, status_code=status.HTTP_201_CREATED)
-def create_topic(payload: TopicCreate, db: Session = Depends(get_db)) -> Topic:
+def create_topic(
+    payload: TopicCreate,
+    _current_user: User = Depends(require_roles("admin", "qa")),
+    db: Session = Depends(get_db),
+) -> Topic:
     topic = Topic(title=payload.title)
     db.add(topic)
     db.commit()
@@ -40,7 +45,10 @@ def create_topic(payload: TopicCreate, db: Session = Depends(get_db)) -> Topic:
 
 
 @router.get("/topics", response_model=list[TopicSummary])
-def list_topics(db: Session = Depends(get_db)) -> list[TopicSummary]:
+def list_topics(
+    _current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[TopicSummary]:
     stmt = (
         select(
             Topic.id,
@@ -72,6 +80,7 @@ def create_message(
     topic_id: int,
     payload: MessageCreate,
     background_tasks: BackgroundTasks,
+    _current_user: User = Depends(require_roles("admin", "qa")),
     db: Session = Depends(get_db),
 ) -> Message:
     topic = db.get(Topic, topic_id)
@@ -93,7 +102,11 @@ def create_message(
 
 
 @router.get("/topics/{topic_id}/messages", response_model=list[MessageRead])
-def list_messages(topic_id: int, db: Session = Depends(get_db)) -> list[Message]:
+def list_messages(
+    topic_id: int,
+    _current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[Message]:
     topic = db.get(Topic, topic_id)
     if topic is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Topic not found.")
@@ -111,7 +124,9 @@ def list_messages(topic_id: int, db: Session = Depends(get_db)) -> list[Message]
     response_model=ScenarioSuggestionsRead,
 )
 def generate_scenario_suggestions(
-    topic_id: int, db: Session = Depends(get_db)
+    topic_id: int,
+    _current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> ScenarioSuggestionsRead:
     topic = db.get(Topic, topic_id)
     if topic is None:
@@ -155,6 +170,7 @@ def generate_scenario_suggestions(
 def save_generated_scenarios(
     topic_id: int,
     payload: ScenarioSuggestionsCreate,
+    _current_user: User = Depends(require_roles("admin", "qa")),
     db: Session = Depends(get_db),
 ) -> list[Scenario]:
     topic = db.get(Topic, topic_id)
@@ -175,6 +191,10 @@ def save_generated_scenarios(
         created.append(scenario)
 
     db.commit()
-    for scenario in created:
-        db.refresh(scenario)
-    return created
+    stmt = (
+        select(Scenario)
+        .where(Scenario.id.in_([scenario.id for scenario in created]))
+        .options(selectinload(Scenario.requirements))
+        .order_by(Scenario.created_at.desc(), Scenario.id.desc())
+    )
+    return list(db.scalars(stmt).all())

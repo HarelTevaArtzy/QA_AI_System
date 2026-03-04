@@ -5,10 +5,11 @@ from datetime import datetime
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from sqlalchemy import case, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from backend.database import get_db
-from backend.models import Scenario
+from backend.models import Scenario, User
+from backend.security import get_current_user
 from backend.services.export_service import build_scenarios_excel, build_scenarios_word
 
 
@@ -23,13 +24,16 @@ def _scenario_export_stmt():
         (Scenario.priority == "low", 3),
         else_=4,
     )
-    return select(Scenario).order_by(
+    return select(Scenario).options(selectinload(Scenario.requirements)).order_by(
         priority_rank.asc(), Scenario.created_at.desc(), Scenario.id.desc()
     )
 
 
 @router.get("/scenarios/excel")
-def export_scenarios_excel(db: Session = Depends(get_db)) -> StreamingResponse:
+def export_scenarios_excel(
+    _current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> StreamingResponse:
     stmt = _scenario_export_stmt()
     scenarios = list(db.scalars(stmt).all())
     file_name = f"qa-scenarios-{datetime.now().strftime('%Y%m%d-%H%M%S')}.xlsx"
@@ -42,7 +46,10 @@ def export_scenarios_excel(db: Session = Depends(get_db)) -> StreamingResponse:
 
 
 @router.get("/scenarios/word")
-def export_scenarios_word(db: Session = Depends(get_db)) -> StreamingResponse:
+def export_scenarios_word(
+    _current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> StreamingResponse:
     stmt = _scenario_export_stmt()
     scenarios = list(db.scalars(stmt).all())
     file_name = f"qa-scenarios-{datetime.now().strftime('%Y%m%d-%H%M%S')}.docx"

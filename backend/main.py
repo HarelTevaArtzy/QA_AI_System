@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 
 from backend.config import get_settings
 from backend.database import init_db
-from backend.routers import discussions, export, scenarios
+from backend.routers import auth, discussions, export, requirements, scenarios, users
 
 
 settings = get_settings()
@@ -33,6 +33,9 @@ app.add_middleware(
 app.include_router(scenarios.router)
 app.include_router(discussions.router)
 app.include_router(export.router)
+app.include_router(auth.router)
+app.include_router(users.router)
+app.include_router(requirements.router)
 
 
 @app.get("/health", tags=["Health"])

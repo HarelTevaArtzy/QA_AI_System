@@ -11,14 +11,10 @@
     const activeTopicTitle = document.getElementById("active-topic-title");
     const refreshButton = document.getElementById("refresh-messages");
     const generateScenariosButton = document.getElementById("generate-scenarios");
-    const scenarioSuggestionsCard = document.getElementById("scenario-suggestions-card");
-    const scenarioSuggestionsToggle = document.getElementById("scenario-suggestions-toggle");
     const scenarioSuggestionsNode = document.getElementById("scenario-suggestions");
     const scenarioSuggestionsStatus = document.getElementById("scenario-suggestions-status");
     const enrichedCount = document.getElementById("enriched-count");
     const scenarioCount = document.getElementById("scenario-count");
-    const panelNode = document.querySelector(".panel-discussions");
-    const panelToggleButton = document.getElementById("discussion-panel-toggle");
 
     const state = {
         topics: [],
@@ -28,6 +24,14 @@
         latestScenarioSuggestions: "",
         latestScenarioItems: [],
     };
+
+    function canWrite() {
+        return window.qaAuth?.canWriteContent?.() || false;
+    }
+
+    function isAuthenticated() {
+        return window.qaAuth?.isAuthenticated?.() || false;
+    }
 
     function setTopicStatus(message, isError = false) {
         topicStatus.textContent = message;
@@ -45,7 +49,7 @@
     }
 
     function escapeHtml(value) {
-        return value
+        return String(value)
             .replaceAll("&", "&amp;")
             .replaceAll("<", "&lt;")
             .replaceAll(">", "&gt;")
@@ -234,20 +238,26 @@
                             ${scenario.expected_result ? `<ul>${scenario.expected_result.split("\n").filter(Boolean).map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>` : "<p>-</p>"}
                         </div>
                     </div>
-                    <div class="item-actions">
-                        <button type="button" class="primary-button small" data-add-scenario="${index}">Add Scenario</button>
-                    </div>
+                    ${
+                        canWrite()
+                            ? `
+                                <div class="item-actions">
+                                    <button type="button" class="primary-button small" data-add-scenario="${index}">Add Scenario</button>
+                                </div>
+                            `
+                            : ""
+                    }
                 </article>
             `)
             .join("");
     }
 
     async function refreshScenarioCount() {
-        if (!(scenarioCount instanceof HTMLElement)) {
+        if (!(scenarioCount instanceof HTMLElement) || !isAuthenticated()) {
             return;
         }
         try {
-            const response = await fetch("/scenarios");
+            const response = await window.qaApi.fetch("/scenarios");
             if (!response.ok) {
                 return;
             }
@@ -271,26 +281,13 @@
         enrichedCount.textContent = String(enrichedMessages);
     }
 
-    function setCollapsedState(container, button, isCollapsed) {
-        if (!(container instanceof HTMLElement) || !(button instanceof HTMLButtonElement)) {
-            return;
-        }
-        container.classList.toggle("is-collapsed", isCollapsed);
-        container.classList.toggle("is-expanded", !isCollapsed);
-        button.setAttribute("aria-expanded", String(!isCollapsed));
-
-        const label = button.querySelector(".collapse-toggle-label");
-        const icon = button.querySelector(".collapse-toggle-icon");
-        if (label) {
-            label.textContent = isCollapsed ? "Expand" : "Collapse";
-        }
-        if (icon) {
-            icon.textContent = isCollapsed ? "+" : "-";
-        }
-    }
-
     function renderTopics() {
         updateMetrics();
+        if (!isAuthenticated()) {
+            topicList.innerHTML = '<div class="empty-state">Sign in to browse discussion topics.</div>';
+            return;
+        }
+
         if (!state.topics.length) {
             topicList.innerHTML = '<div class="empty-state">No topics yet. Create one to start the discussion workspace.</div>';
             return;
@@ -314,6 +311,12 @@
     function renderMessages(options = {}) {
         const {stickToBottom = false} = options;
         updateMetrics();
+
+        if (!isAuthenticated()) {
+            messageList.innerHTML = '<div class="empty-state">Sign in to inspect discussion history.</div>';
+            return;
+        }
+
         if (!state.activeTopicId) {
             messageList.innerHTML = '<div class="empty-state">Choose a topic to view its conversation history.</div>';
             return;
@@ -351,9 +354,35 @@
         messageList.scrollTop = Math.max(0, messageList.scrollHeight - distanceFromBottom);
     }
 
+    function updateActionState() {
+        const writable = canWrite();
+        topicForm.querySelectorAll("input, button").forEach((node) => {
+            if (node instanceof HTMLInputElement || node instanceof HTMLButtonElement) {
+                node.disabled = !writable;
+            }
+        });
+        messageForm.querySelectorAll("textarea, button").forEach((node) => {
+            if (node instanceof HTMLTextAreaElement || node instanceof HTMLButtonElement) {
+                node.disabled = !writable;
+            }
+        });
+        generateScenariosButton.disabled = !isAuthenticated() || !state.activeTopicId;
+    }
+
     async function loadTopics() {
+        if (!isAuthenticated()) {
+            state.topics = [];
+            state.messages = [];
+            state.activeTopicId = null;
+            activeTopicTitle.textContent = "Sign in to access discussions";
+            renderTopics();
+            renderMessages();
+            updateActionState();
+            return;
+        }
+
         try {
-            const response = await fetch("/topics");
+            const response = await window.qaApi.fetch("/topics");
             if (!response.ok) {
                 throw new Error("Unable to load topics.");
             }
@@ -369,11 +398,11 @@
     }
 
     async function loadMessages(options = {}) {
-        if (!state.activeTopicId) {
+        if (!state.activeTopicId || !isAuthenticated()) {
             return;
         }
         try {
-            const response = await fetch(`/topics/${state.activeTopicId}/messages`);
+            const response = await window.qaApi.fetch(`/topics/${state.activeTopicId}/messages`);
             if (!response.ok) {
                 throw new Error("Unable to load messages.");
             }
@@ -391,14 +420,20 @@
         renderScenarioSuggestions("", []);
         setScenarioSuggestionsStatus("");
         renderTopics();
+        updateActionState();
         await loadMessages({stickToBottom: true});
     }
 
     async function createTopic(event) {
         event.preventDefault();
+        if (!canWrite()) {
+            setTopicStatus("Only Admin and QA users can create topics.", true);
+            return;
+        }
+
         setTopicStatus("Creating topic...");
         try {
-            const response = await fetch("/topics", {
+            const response = await window.qaApi.fetch("/topics", {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify({title: topicInput.value}),
@@ -425,9 +460,14 @@
             setMessageStatus("Create or select a topic first.", true);
             return;
         }
+        if (!canWrite()) {
+            setMessageStatus("Only Admin and QA users can post messages.", true);
+            return;
+        }
+
         setMessageStatus("Posting message...");
         try {
-            const response = await fetch(`/topics/${state.activeTopicId}/messages`, {
+            const response = await window.qaApi.fetch(`/topics/${state.activeTopicId}/messages`, {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify({content: messageInput.value}),
@@ -452,7 +492,7 @@
 
         setScenarioSuggestionsStatus("Generating scenarios...");
         try {
-            const response = await fetch(`/topics/${state.activeTopicId}/scenario-suggestions`, {
+            const response = await window.qaApi.fetch(`/topics/${state.activeTopicId}/scenario-suggestions`, {
                 method: "POST",
             });
             if (!response.ok) {
@@ -468,6 +508,10 @@
     }
 
     async function addScenarioByIndex(index) {
+        if (!canWrite()) {
+            setScenarioSuggestionsStatus("Only Admin and QA users can save scenarios.", true);
+            return;
+        }
         const scenario = state.latestScenarioItems[index];
         if (!scenario) {
             setScenarioSuggestionsStatus("Scenario suggestion is unavailable.", true);
@@ -475,7 +519,7 @@
         }
         setScenarioSuggestionsStatus("Saving scenario...");
         try {
-            const response = await fetch("/scenarios", {
+            const response = await window.qaApi.fetch("/scenarios", {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify(scenario),
@@ -487,6 +531,7 @@
             state.latestScenarioItems = state.latestScenarioItems.filter((_, itemIndex) => itemIndex !== index);
             renderScenarioSuggestions(state.latestScenarioSuggestions, state.latestScenarioItems);
             await refreshScenarioCount();
+            window.dispatchEvent(new Event("qa:scenarios-changed"));
             setScenarioSuggestionsStatus("Scenario saved.");
         } catch (error) {
             setScenarioSuggestionsStatus(error.message || "Unable to save scenario.", true);
@@ -531,33 +576,26 @@
 
     generateScenariosButton?.addEventListener("click", generateScenarioSuggestions);
 
-    scenarioSuggestionsToggle?.addEventListener("click", () => {
-        if (!(scenarioSuggestionsCard instanceof HTMLElement)) {
-            return;
-        }
-        const isCollapsed = !scenarioSuggestionsCard.classList.contains("is-collapsed");
-        setCollapsedState(scenarioSuggestionsCard, scenarioSuggestionsToggle, isCollapsed);
-    });
-
-    panelToggleButton?.addEventListener("click", () => {
-        if (!(panelNode instanceof HTMLElement)) {
-            return;
-        }
-        const isCollapsed = !panelNode.classList.contains("is-collapsed");
-        setCollapsedState(panelNode, panelToggleButton, isCollapsed);
-    });
-
     topicForm.addEventListener("submit", createTopic);
     messageForm.addEventListener("submit", postMessage);
 
     state.refreshTimer = window.setInterval(async () => {
-        if (!state.activeTopicId) {
+        if (!state.activeTopicId || !isAuthenticated()) {
             return;
         }
         await Promise.all([loadTopics(), loadMessages()]);
     }, 4000);
 
-    setCollapsedState(panelNode, panelToggleButton, true);
-    setCollapsedState(scenarioSuggestionsCard, scenarioSuggestionsToggle, false);
-    loadTopics();
+    window.addEventListener("qa:auth-changed", async () => {
+        state.latestScenarioSuggestions = "";
+        state.latestScenarioItems = [];
+        renderScenarioSuggestions("", []);
+        await loadTopics();
+        updateActionState();
+    });
+
+    renderScenarioSuggestions("", []);
+    renderTopics();
+    renderMessages();
+    updateActionState();
 })();

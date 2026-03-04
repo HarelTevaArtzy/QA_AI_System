@@ -1,14 +1,19 @@
 # Agentic QA System
 
-FastAPI + SQLite + Vanilla JS implementation of the QA Scenario Management System described in the provided PDF.
+FastAPI + SQLite + Vanilla JS implementation of a structured QA management platform with requirements, linked test scenarios, discussions, and role-based access control.
 
 ## Included
 
+- Authentication with persistent bearer sessions and role-based permissions for `admin`, `qa`, and `viewer`
+- Admin user management for creating, updating, and deleting accounts
+- Requirements management with parent-child hierarchy support
+- Requirement-to-scenario traceability so each test can cover one or more requirements
+- Requirement-driven scenario generation and direct scenario creation from selected requirements
 - Scenario CRUD for title, description, test steps, expected results, and priority
 - Topic and message storage for testing discussions
 - Asynchronous message enrichment with an Agno QA analyst agent using a local Ollama model by default
 - Deterministic fallback enrichment when the configured model provider is unavailable
-- Excel and Word export endpoints for stored scenarios
+- Excel and Word export endpoints for stored scenarios, including linked requirements
 - A single-page frontend served by FastAPI
 
 ## Project Structure
@@ -22,6 +27,8 @@ backend/
   routers/
   services/
 frontend/
+  auth.js
+  requirements.js
   index.html
   styles.css
   scenarios.js
@@ -40,6 +47,15 @@ python main.py
 ```
 
 Open `http://127.0.0.1:8000`.
+
+## Default Admin Login
+
+On first startup, the system creates a bootstrap admin account if no users exist.
+
+- `DEFAULT_ADMIN_USERNAME` defaults to `admin`
+- `DEFAULT_ADMIN_PASSWORD` defaults to `ChangeMe123!`
+
+Override both in the environment before starting the app in any non-test environment.
 
 ## Ollama Setup
 
@@ -65,6 +81,21 @@ If Ollama is unavailable, message enrichment falls back to a deterministic rules
 
 ## API Summary
 
+- `POST /auth/login`
+- `POST /auth/logout`
+- `GET /auth/me`
+- `GET /users`
+- `POST /users`
+- `PUT /users/{id}`
+- `DELETE /users/{id}`
+- `POST /requirements`
+- `GET /requirements`
+- `GET /requirements/{id}`
+- `PUT /requirements/{id}`
+- `DELETE /requirements/{id}`
+- `POST /requirements/{id}/scenarios`
+- `POST /requirements/{id}/scenario-suggestions`
+- `POST /requirements/{id}/scenario-suggestions/save`
 - `POST /scenarios`
 - `GET /scenarios`
 - `GET /scenarios/{id}`

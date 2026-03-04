@@ -7,6 +7,7 @@
     const stepsInput = document.getElementById("scenario-steps");
     const expectedInput = document.getElementById("scenario-expected");
     const priorityInput = document.getElementById("scenario-priority");
+    const requirementSelector = document.getElementById("scenario-requirement-selector");
     const statusNode = document.getElementById("scenario-status");
     const listNode = document.getElementById("scenario-list");
     const countNode = document.getElementById("scenario-list-count");
@@ -21,6 +22,7 @@
     const state = {
         editingId: null,
         scenarios: [],
+        requirements: [],
     };
 
     function setStatus(message, isError = false) {
@@ -29,7 +31,7 @@
     }
 
     function escapeHtml(value) {
-        return value
+        return String(value)
             .replaceAll("&", "&amp;")
             .replaceAll("<", "&lt;")
             .replaceAll(">", "&gt;")
@@ -38,7 +40,7 @@
     }
 
     function formatLines(value) {
-        const lines = value.split("\n").map((line) => line.trim()).filter(Boolean);
+        const lines = String(value || "").split("\n").map((line) => line.trim()).filter(Boolean);
         if (!lines.length) {
             return "<p>-</p>";
         }
@@ -47,12 +49,6 @@
 
     function formatDate(value) {
         return new Date(value).toLocaleString();
-    }
-
-    function updateCounts() {
-        const count = state.scenarios.length;
-        countNode.textContent = `${count} item${count === 1 ? "" : "s"}`;
-        metricNode.textContent = String(count);
     }
 
     function setCollapsedState(container, button, isCollapsed) {
@@ -73,8 +69,59 @@
         }
     }
 
+    function canWrite() {
+        return window.qaAuth?.canWriteContent?.() || false;
+    }
+
+    function getSelectedRequirementIds() {
+        return Array.from(requirementSelector.querySelectorAll('input[type="checkbox"]:checked'))
+            .map((input) => Number(input.value))
+            .filter((value) => !Number.isNaN(value));
+    }
+
+    function setSelectedRequirementIds(ids) {
+        const selected = new Set(ids.map((value) => Number(value)));
+        requirementSelector.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+            if (!(input instanceof HTMLInputElement)) {
+                return;
+            }
+            input.checked = selected.has(Number(input.value));
+        });
+    }
+
+    function updateCounts() {
+        const count = state.scenarios.length;
+        countNode.textContent = `${count} item${count === 1 ? "" : "s"}`;
+        metricNode.textContent = String(count);
+    }
+
+    function renderRequirementSelector() {
+        if (!window.qaAuth?.isAuthenticated?.()) {
+            requirementSelector.innerHTML = '<div class="empty-state">Sign in to link scenarios to requirements.</div>';
+            return;
+        }
+
+        if (!state.requirements.length) {
+            requirementSelector.innerHTML = '<div class="empty-state">No requirements available yet.</div>';
+            return;
+        }
+
+        requirementSelector.innerHTML = state.requirements.map((requirement) => `
+            <label class="linked-option">
+                <input type="checkbox" value="${requirement.id}">
+                <span>${escapeHtml(requirement.title)}</span>
+            </label>
+        `).join("");
+    }
+
     function renderScenarios() {
         updateCounts();
+
+        if (!window.qaAuth?.isAuthenticated?.()) {
+            listNode.innerHTML = '<div class="empty-state">Sign in to access the scenario library.</div>';
+            return;
+        }
+
         if (!state.scenarios.length) {
             listNode.innerHTML = '<div class="empty-state">No scenarios yet. Create one to start building the QA library.</div>';
             return;
@@ -93,6 +140,14 @@
                     <div class="scenario-body">
                         <p>${escapeHtml(scenario.description || "No description provided.")}</p>
                         <div>
+                            <span class="scenario-section-title">Linked Requirements</span>
+                            ${
+                                scenario.requirements?.length
+                                    ? `<div class="linked-badges">${scenario.requirements.map((requirement) => `<span class="linked-badge">${escapeHtml(requirement.title)}</span>`).join("")}</div>`
+                                    : "<p>-</p>"
+                            }
+                        </div>
+                        <div>
                             <span class="scenario-section-title">Test Steps</span>
                             ${formatLines(scenario.steps)}
                         </div>
@@ -101,10 +156,16 @@
                             ${formatLines(scenario.expected_result)}
                         </div>
                     </div>
-                    <div class="item-actions">
-                        <button type="button" class="ghost-button small" data-action="edit" data-id="${scenario.id}">Edit</button>
-                        <button type="button" class="ghost-button small" data-action="delete" data-id="${scenario.id}">Delete</button>
-                    </div>
+                    ${
+                        canWrite()
+                            ? `
+                                <div class="item-actions">
+                                    <button type="button" class="ghost-button small" data-action="edit" data-id="${scenario.id}">Edit</button>
+                                    <button type="button" class="ghost-button small" data-action="delete" data-id="${scenario.id}">Delete</button>
+                                </div>
+                            `
+                            : ""
+                    }
                 </article>
             `)
             .join("");
@@ -116,6 +177,7 @@
         form.reset();
         priorityInput.value = "medium";
         formTitle.textContent = "Create Scenario";
+        setSelectedRequirementIds([]);
         setStatus("");
     }
 
@@ -127,14 +189,32 @@
         stepsInput.value = scenario.steps;
         expectedInput.value = scenario.expected_result;
         priorityInput.value = scenario.priority;
+        setSelectedRequirementIds((scenario.requirements || []).map((item) => item.id));
         formTitle.textContent = "Edit Scenario";
         setStatus(`Editing scenario #${scenario.id}`);
         window.scrollTo({top: 0, behavior: "smooth"});
     }
 
+    function updateActionState() {
+        const writable = canWrite();
+        form.querySelectorAll("input, textarea, select, button").forEach((node) => {
+            if (!(node instanceof HTMLButtonElement) && !(node instanceof HTMLInputElement) && !(node instanceof HTMLTextAreaElement) && !(node instanceof HTMLSelectElement)) {
+                return;
+            }
+            node.disabled = !writable;
+        });
+    }
+
     async function loadScenarios() {
+        if (!window.qaAuth?.isAuthenticated?.()) {
+            state.scenarios = [];
+            renderScenarios();
+            updateActionState();
+            return;
+        }
+
         try {
-            const response = await fetch("/scenarios");
+            const response = await window.qaApi.fetch("/scenarios");
             if (!response.ok) {
                 throw new Error("Unable to load scenarios.");
             }
@@ -147,6 +227,11 @@
 
     async function saveScenario(event) {
         event.preventDefault();
+        if (!canWrite()) {
+            setStatus("Only Admin and QA users can change scenarios.", true);
+            return;
+        }
+
         setStatus("Saving scenario...");
 
         const payload = {
@@ -155,13 +240,14 @@
             steps: stepsInput.value,
             expected_result: expectedInput.value,
             priority: priorityInput.value,
+            requirement_ids: getSelectedRequirementIds(),
         };
         const isEditing = Boolean(state.editingId);
         const url = isEditing ? `/scenarios/${state.editingId}` : "/scenarios";
         const method = isEditing ? "PUT" : "POST";
 
         try {
-            const response = await fetch(url, {
+            const response = await window.qaApi.fetch(url, {
                 method,
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify(payload),
@@ -173,34 +259,65 @@
             await loadScenarios();
             resetForm();
             setStatus(isEditing ? "Scenario updated." : "Scenario created.");
+            window.dispatchEvent(new Event("qa:scenarios-changed"));
         } catch (error) {
             setStatus(error.message || "Unable to save scenario.", true);
         }
     }
 
     async function deleteScenario(id) {
-        const approved = window.confirm("Delete this scenario?");
-        if (!approved) {
+        if (!window.confirm("Delete this scenario?")) {
             return;
         }
 
         setStatus("Deleting scenario...");
         try {
-            const response = await fetch(`/scenarios/${id}`, {method: "DELETE"});
+            const response = await window.qaApi.fetch(`/scenarios/${id}`, {method: "DELETE"});
             if (!response.ok) {
-                throw new Error("Unable to delete scenario.");
+                const problem = await response.json().catch(() => ({}));
+                throw new Error(problem.detail || "Unable to delete scenario.");
             }
             if (state.editingId === id) {
                 resetForm();
             }
             await loadScenarios();
             setStatus("Scenario deleted.");
+            window.dispatchEvent(new Event("qa:scenarios-changed"));
         } catch (error) {
             setStatus(error.message || "Unable to delete scenario.", true);
         }
     }
 
-    listNode.addEventListener("click", (event) => {
+    async function exportFile(url, fallbackName) {
+        if (!window.qaAuth?.isAuthenticated?.()) {
+            setStatus("Sign in before exporting.", true);
+            return;
+        }
+
+        setStatus("Preparing export...");
+        try {
+            const response = await window.qaApi.fetch(url);
+            if (!response.ok) {
+                throw new Error("Unable to export scenarios.");
+            }
+            const blob = await response.blob();
+            const objectUrl = window.URL.createObjectURL(blob);
+            const anchor = document.createElement("a");
+            const contentDisposition = response.headers.get("Content-Disposition") || "";
+            const match = contentDisposition.match(/filename="([^"]+)"/i);
+            anchor.href = objectUrl;
+            anchor.download = match?.[1] || fallbackName;
+            document.body.appendChild(anchor);
+            anchor.click();
+            anchor.remove();
+            window.URL.revokeObjectURL(objectUrl);
+            setStatus("Export ready.");
+        } catch (error) {
+            setStatus(error.message || "Unable to export scenarios.", true);
+        }
+    }
+
+    listNode.addEventListener("click", async (event) => {
         const target = event.target;
         if (!(target instanceof HTMLElement)) {
             return;
@@ -218,17 +335,12 @@
             populateForm(scenario);
         }
         if (action === "delete") {
-            deleteScenario(id);
+            await deleteScenario(id);
         }
     });
 
-    exportExcelButton.addEventListener("click", () => {
-        window.open("/export/scenarios/excel", "_blank", "noopener");
-    });
-
-    exportWordButton.addEventListener("click", () => {
-        window.open("/export/scenarios/word", "_blank", "noopener");
-    });
+    exportExcelButton.addEventListener("click", () => exportFile("/export/scenarios/excel", "qa-scenarios.xlsx"));
+    exportWordButton.addEventListener("click", () => exportFile("/export/scenarios/word", "qa-scenarios.docx"));
 
     refreshLibraryButton?.addEventListener("click", async () => {
         setStatus("Refreshing scenarios...");
@@ -244,8 +356,42 @@
         setCollapsedState(panelNode, panelToggleButton, isCollapsed);
     });
 
+    window.addEventListener("qa:auth-changed", async () => {
+        resetForm();
+        renderRequirementSelector();
+        updateActionState();
+        await loadScenarios();
+    });
+
+    window.addEventListener("qa:requirements-updated", (event) => {
+        const requirements = event.detail?.requirements;
+        state.requirements = Array.isArray(requirements) ? requirements : [];
+        const selectedIds = getSelectedRequirementIds();
+        renderRequirementSelector();
+        setSelectedRequirementIds(selectedIds);
+    });
+
+    window.addEventListener("qa:prefill-scenario-from-requirement", (event) => {
+        const requirement = event.detail?.requirement;
+        if (!requirement) {
+            return;
+        }
+        setCollapsedState(panelNode, panelToggleButton, false);
+        resetForm();
+        titleInput.value = `${requirement.title} coverage`;
+        descriptionInput.value = requirement.description || `Validate requirement: ${requirement.title}`;
+        setSelectedRequirementIds([requirement.id]);
+        setStatus(`Scenario form prepared from requirement #${requirement.id}.`);
+        titleInput.focus();
+        window.scrollTo({top: 0, behavior: "smooth"});
+    });
+
+    window.addEventListener("qa:scenarios-changed", loadScenarios);
+
     form.addEventListener("submit", saveScenario);
     resetButton.addEventListener("click", resetForm);
     setCollapsedState(panelNode, panelToggleButton, true);
-    loadScenarios();
+    renderRequirementSelector();
+    renderScenarios();
+    updateActionState();
 })();

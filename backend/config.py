@@ -12,6 +12,8 @@ class Settings:
     project_root: Path
     frontend_dir: Path
     database_url: str
+    default_admin_username: str
+    default_admin_password: str
     agno_provider: str
     agno_model: str
     agno_base_url: str | None
@@ -32,6 +34,8 @@ def get_settings() -> Settings:
         database_url=os.getenv(
             "DATABASE_URL", f"sqlite:///{database_file.resolve().as_posix()}"
         ),
+        default_admin_username=os.getenv("DEFAULT_ADMIN_USERNAME", "admin"),
+        default_admin_password=os.getenv("DEFAULT_ADMIN_PASSWORD", "ADMIN123"),
         agno_provider=os.getenv("AGNO_PROVIDER", "ollama").strip().lower(),
         agno_model=os.getenv("AGNO_MODEL", "llama3.1:8b"),
         agno_base_url=os.getenv("AGNO_BASE_URL"),
