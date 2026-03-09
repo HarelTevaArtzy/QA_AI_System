@@ -187,6 +187,7 @@ def test_discussion_storage_and_enrichment_fallback() -> None:
         assert messages.status_code == 200
         payload = messages.json()
         assert len(payload) == 1
+        assert payload[0]["sender_name"] == "admin"
         assert payload[0]["enriched_content"]
         assert payload[0]["enriched_content"].startswith("## Summary")
         assert "Fallback enrichment used" not in payload[0]["enriched_content"]
@@ -203,6 +204,43 @@ def test_discussion_storage_and_enrichment_fallback() -> None:
         assert "## QA Heuristics" in payload[0]["enriched_content"]
         assert payload[0]["enriched_content"].count("## QA Heuristics") == 1
         assert "Login redirects to homepage" in payload[0]["enriched_content"]
+
+
+def test_discussion_sender_name_survives_role_change_and_deletion() -> None:
+    with TestClient(app) as client:
+        admin_headers = login(client)
+        qa_user = create_user(client, admin_headers, username="qa_writer", role="qa")
+        qa_headers = login(client, username="qa_writer", password="Password123!")
+
+        topic = client.post("/topics", headers=qa_headers, json={"title": "Sender identity"})
+        assert topic.status_code == 201
+        topic_id = topic.json()["id"]
+
+        created_message = client.post(
+            f"/topics/{topic_id}/messages",
+            headers=qa_headers,
+            json={"content": "Message from a QA writer."},
+        )
+        assert created_message.status_code == 201
+        assert created_message.json()["sender_name"] == "qa_writer"
+
+        downgraded = client.put(
+            f"/users/{qa_user['id']}",
+            headers=admin_headers,
+            json={"username": "qa_writer", "password": None, "role": "viewer"},
+        )
+        assert downgraded.status_code == 200
+
+        messages_after_downgrade = client.get(f"/topics/{topic_id}/messages", headers=admin_headers)
+        assert messages_after_downgrade.status_code == 200
+        assert messages_after_downgrade.json()[0]["sender_name"] == "qa_writer"
+
+        deleted = client.delete(f"/users/{qa_user['id']}", headers=admin_headers)
+        assert deleted.status_code == 204
+
+        messages_after_delete = client.get(f"/topics/{topic_id}/messages", headers=admin_headers)
+        assert messages_after_delete.status_code == 200
+        assert messages_after_delete.json()[0]["sender_name"] == "qa_writer [Deleted User]"
 
 
 def test_scenario_suggestions_endpoint() -> None:

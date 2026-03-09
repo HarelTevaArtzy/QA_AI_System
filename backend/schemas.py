@@ -161,6 +161,7 @@ class MessageCreate(BaseModel):
 class MessageRead(BaseModel):
     id: int
     topic_id: int
+    sender_name: str
     content: str
     enriched_content: str | None
     created_at: datetime

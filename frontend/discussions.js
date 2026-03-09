@@ -333,7 +333,7 @@
             .map((message, index) => `
                 <article class="message">
                     <div class="message-head">
-                        <h4>Message #${index + 1}</h4>
+                        <h4>${escapeHtml(message.sender_name || `Message #${index + 1}`)}</h4>
                         <span class="message-meta">${formatDate(message.created_at)}</span>
                     </div>
                     <div class="message-copy">${escapeHtml(message.content)}</div>
@@ -366,7 +366,7 @@
                 node.disabled = !writable;
             }
         });
-        generateScenariosButton.disabled = !isAuthenticated() || !state.activeTopicId;
+        generateScenariosButton.disabled = !writable || !state.activeTopicId;
     }
 
     async function loadTopics() {
@@ -487,6 +487,10 @@
     async function generateScenarioSuggestions() {
         if (!state.activeTopicId) {
             setScenarioSuggestionsStatus("Create or select a topic first.", true);
+            return;
+        }
+        if (!canWrite()) {
+            setScenarioSuggestionsStatus("Only Admin and QA users can generate scenarios.", true);
             return;
         }
 

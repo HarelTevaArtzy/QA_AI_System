@@ -31,6 +31,10 @@ class Message(Base):
     topic_id: Mapped[int] = mapped_column(
         ForeignKey("topics.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    sender_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    sender_name_snapshot: Mapped[str | None] = mapped_column(String(100), nullable=True)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     enriched_content: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -38,3 +42,12 @@ class Message(Base):
     )
 
     topic: Mapped[Topic] = relationship(back_populates="messages")
+    sender: Mapped["User | None"] = relationship()
+
+    @property
+    def sender_name(self) -> str:
+        if self.sender is not None:
+            return self.sender_name_snapshot or self.sender.username
+        if self.sender_name_snapshot:
+            return f"{self.sender_name_snapshot} [Deleted User]"
+        return "Unknown User [Deleted User]"

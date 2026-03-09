@@ -564,11 +564,10 @@ button:hover {
 
 .requirement-detail-flow {
     display: grid;
-    align-content: start;
+    grid-template-rows: minmax(0, 1fr) auto;
     gap: 18px;
     min-height: 0;
-    overflow: auto;
-    padding-right: 6px;
+    overflow: hidden;
 }
 
 .requirement-tree {
@@ -576,8 +575,8 @@ button:hover {
 }
 
 .requirement-detail {
-    overflow: visible;
-    padding-right: 0;
+    overflow: auto;
+    padding-right: 6px;
 }
 
 .requirement-node {

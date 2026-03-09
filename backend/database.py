@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Generator
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from backend.config import get_settings
@@ -31,4 +31,19 @@ def init_db() -> None:
     from backend.security import ensure_default_admin
 
     Base.metadata.create_all(bind=engine)
+    _apply_sqlite_compat_migrations()
     ensure_default_admin()
+
+
+def _apply_sqlite_compat_migrations() -> None:
+    if not settings.database_url.startswith("sqlite"):
+        return
+
+    with engine.begin() as connection:
+        existing_columns = {
+            row[1] for row in connection.execute(text("PRAGMA table_info(messages)")).fetchall()
+        }
+        if "sender_id" not in existing_columns:
+            connection.execute(text("ALTER TABLE messages ADD COLUMN sender_id INTEGER"))
+        if "sender_name_snapshot" not in existing_columns:
+            connection.execute(text("ALTER TABLE messages ADD COLUMN sender_name_snapshot VARCHAR(100)"))

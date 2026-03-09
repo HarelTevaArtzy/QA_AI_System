@@ -80,14 +80,19 @@ def create_message(
     topic_id: int,
     payload: MessageCreate,
     background_tasks: BackgroundTasks,
-    _current_user: User = Depends(require_roles("admin", "qa")),
+    current_user: User = Depends(require_roles("admin", "qa")),
     db: Session = Depends(get_db),
 ) -> Message:
     topic = db.get(Topic, topic_id)
     if topic is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Topic not found.")
 
-    message = Message(topic_id=topic_id, content=payload.content)
+    message = Message(
+        topic_id=topic_id,
+        sender_id=current_user.id,
+        sender_name_snapshot=current_user.username,
+        content=payload.content,
+    )
     db.add(message)
     db.commit()
     db.refresh(message)
@@ -114,6 +119,7 @@ def list_messages(
     stmt = (
         select(Message)
         .where(Message.topic_id == topic_id)
+        .options(selectinload(Message.sender))
         .order_by(Message.created_at.asc(), Message.id.asc())
     )
     return list(db.scalars(stmt).all())
@@ -125,7 +131,7 @@ def list_messages(
 )
 def generate_scenario_suggestions(
     topic_id: int,
-    _current_user: User = Depends(get_current_user),
+    _current_user: User = Depends(require_roles("admin", "qa")),
     db: Session = Depends(get_db),
 ) -> ScenarioSuggestionsRead:
     topic = db.get(Topic, topic_id)
