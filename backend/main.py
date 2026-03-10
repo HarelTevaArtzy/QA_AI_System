@@ -1,11 +1,9 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend.config import get_settings
@@ -46,7 +44,4 @@ def health_check() -> dict[str, str]:
 frontend_dir = settings.frontend_dir
 if frontend_dir.exists():
     app.mount("/static", StaticFiles(directory=frontend_dir), name="static")
-
-    @app.get("/", include_in_schema=False)
-    def read_index() -> FileResponse:
-        return FileResponse(Path(frontend_dir) / "index.html")
+    app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
