@@ -48,14 +48,41 @@ python main.py
 
 Open `http://127.0.0.1:8000`.
 
+## Run With Docker
+
+### Option A: Docker Compose (recommended)
+
+```bash
+docker compose up --build -d
+```
+
+Open `http://127.0.0.1:8000`.
+
+Stop:
+
+```bash
+docker compose down
+```
+
+This keeps SQLite data in a named Docker volume (`qa_ai_data`).
+
+### Option B: Plain Docker
+
+```bash
+docker build -t qa-ai-system .
+docker run --name qa-ai-system -p 8000:8000 -e DATABASE_FILE=/app/data/qa_system.db -v qa_ai_data:/app/data qa-ai-system
+```
+
 ## Default Admin Login
 
 On first startup, the system creates a bootstrap admin account if no users exist.
 
 - `DEFAULT_ADMIN_USERNAME` defaults to `admin`
-- `DEFAULT_ADMIN_PASSWORD` defaults to `ChangeMe123!`
+- `DEFAULT_ADMIN_PASSWORD` defaults to `ADMIN123`
 
 Override both in the environment before starting the app in any non-test environment.
+
+When using Docker Compose, you can override variables by creating a `.env` file in the project root (see `.env.example`).
 
 ## Ollama Setup
 

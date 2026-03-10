@@ -1,7 +1,14 @@
+.git
+.idea
+.pytest_cache
 .venv
 __pycache__
 *.pyc
-.git
-.gitignore
+*.pyo
+*.pyd
+qa_system.db
 tests
-frontend
+*.log
+.env
+dist
+build

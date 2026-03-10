@@ -19,16 +19,16 @@ def build_model(settings: Settings) -> Model:
         from agno.models.ollama import Ollama
 
         kwargs = {"id": settings.agno_model}
-        if settings.agno_base_url:
-            kwargs["host"] = settings.agno_base_url
+        if settings.ai_base_url:
+            kwargs["host"] = settings.ai_base_url
         return Ollama(**kwargs)
 
     if provider == "lmstudio":
         from agno.models.lmstudio import LMStudio
 
         kwargs = {"id": settings.agno_model}
-        if settings.agno_base_url:
-            kwargs["base_url"] = settings.agno_base_url
+        if settings.ai_base_url:
+            kwargs["base_url"] = settings.ai_base_url
         return LMStudio(**kwargs)
 
     raise ValueError(
