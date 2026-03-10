@@ -1,4 +1,5 @@
 (function () {
+    const API_BASE_URL = "https://qa-ai-system-1.onrender.com";
     const storageKey = "qa-system-auth";
     const defaultPanelId = "requirements-panel";
     const loginForm = document.getElementById("login-form");
@@ -239,12 +240,22 @@
         broadcastAuthChange();
     }
 
+    function resolveApiUrl(path) {
+        if (typeof path !== "string" || !path) {
+            return path;
+        }
+        if (/^https?:\/\//i.test(path)) {
+            return path;
+        }
+        return `${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
+    }
+
     async function apiFetch(url, options = {}) {
         const headers = new Headers(options.headers || {});
         if (state.token && !headers.has("Authorization")) {
             headers.set("Authorization", `Bearer ${state.token}`);
         }
-        const response = await fetch(url, {...options, headers});
+        const response = await fetch(resolveApiUrl(url), {...options, headers});
         if (response.status === 401 && state.token) {
             clearAuthState("Your session expired. Sign in again.");
         }
@@ -297,7 +308,7 @@
         event.preventDefault();
         setAuthStatus("Signing in...");
         try {
-            const response = await fetch("/auth/login", {
+            const response = await fetch(resolveApiUrl("/auth/login"), {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify({
