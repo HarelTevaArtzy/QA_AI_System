@@ -318,6 +318,10 @@
         }
 
         if (!state.activeTopicId) {
+            if (!state.topics.length) {
+                messageList.innerHTML = '<div class="empty-state">No discussion history yet. Create a topic to get started.</div>';
+                return;
+            }
             messageList.innerHTML = '<div class="empty-state">Choose a topic to view its conversation history.</div>';
             return;
         }
@@ -389,9 +393,28 @@
             state.topics = await response.json();
             renderTopics();
 
+            if (!state.topics.length) {
+                state.activeTopicId = null;
+                state.messages = [];
+                activeTopicTitle.textContent = "Select or create a topic";
+                renderMessages();
+                updateActionState();
+                return;
+            }
+
+            const hasActiveTopic = state.topics.some((topic) => topic.id === state.activeTopicId);
+            if (!hasActiveTopic) {
+                state.activeTopicId = null;
+                state.messages = [];
+            }
+
             if (!state.activeTopicId && state.topics.length) {
                 await selectTopic(state.topics[0].id);
+                return;
             }
+
+            renderMessages();
+            updateActionState();
         } catch (error) {
             setTopicStatus(error.message || "Unable to load topics.", true);
         }
