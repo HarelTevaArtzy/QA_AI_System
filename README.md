@@ -84,6 +84,23 @@ Override both in the environment before starting the app in any non-test environ
 
 When using Docker Compose, you can override variables by creating a `.env` file in the project root (see `.env.example`).
 
+## Deployment Configuration
+
+- `CORS_ALLOWED_ORIGINS` accepts a comma-separated origin list, for example:
+  - `https://your-app.netlify.app,https://qa-ai-system-1.onrender.com`
+- If omitted, the backend defaults to `*` for compatibility.
+- For production, set `DEFAULT_ADMIN_USERNAME` and `DEFAULT_ADMIN_PASSWORD` to non-default values before first startup on a new database.
+
+The frontend API URL is configured in `frontend/index.html` using:
+
+```html
+<meta name="qa-api-base-url" content="https://qa-ai-system-1.onrender.com">
+```
+
+- Keep that value as Render while you are still on Render.
+- Switch it to your new public backend URL when you move to self-hosting.
+- Set it to an empty value (`content=""`) if the frontend is served from the same origin as the API.
+
 ## Ollama Setup
 
 The default agent backend is `Agno + Ollama`.

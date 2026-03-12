@@ -11,6 +11,12 @@ DEFAULT_AI_BASE_URL = "http://localhost:11434"
 DEFAULT_INTERNAL_API_URL = "http://localhost:8001"
 
 
+def _parse_csv(value: str | None) -> list[str]:
+    if value is None:
+        return []
+    return [item.strip().rstrip("/") for item in value.split(",") if item.strip()]
+
+
 @dataclass(frozen=True)
 class Settings:
     app_name: str
@@ -24,6 +30,7 @@ class Settings:
     agno_model: str
     ai_base_url: str
     internal_api_url: str
+    cors_allowed_origins: list[str]
     sync_enrichment: bool
 
 
@@ -47,6 +54,9 @@ def get_settings() -> Settings:
         os.getenv("INTERNAL_API_URL", DEFAULT_INTERNAL_API_URL).strip()
         or DEFAULT_INTERNAL_API_URL
     )
+    cors_allowed_origins = _parse_csv(os.getenv("CORS_ALLOWED_ORIGINS"))
+    if not cors_allowed_origins:
+        cors_allowed_origins = ["*"]
 
     return Settings(
         app_name=os.getenv("APP_NAME", "Agentic QA System"),
@@ -62,6 +72,7 @@ def get_settings() -> Settings:
         agno_model=os.getenv("AGNO_MODEL", "llama3.1:8b"),
         ai_base_url=ai_base_url,
         internal_api_url=internal_api_url,
+        cors_allowed_origins=cors_allowed_origins,
         sync_enrichment=os.getenv("SYNC_ENRICHMENT", "false").lower()
         in {"1", "true", "yes"},
     )

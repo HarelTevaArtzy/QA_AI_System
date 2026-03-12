@@ -1,5 +1,15 @@
 (function () {
-    const API_BASE_URL = "https://qa-ai-system-1.onrender.com";
+    const DEFAULT_API_BASE_URL = "https://qa-ai-system-1.onrender.com";
+    const apiBaseMetaTag = document.querySelector('meta[name="qa-api-base-url"]');
+    const hasApiBaseMetaTag = Boolean(apiBaseMetaTag);
+    const metaApiBaseUrl = hasApiBaseMetaTag
+        ? (apiBaseMetaTag.getAttribute("content") || "").trim()
+        : "";
+    const runtimeApiBaseUrl = typeof window.__QA_API_BASE_URL__ === "string"
+        ? window.__QA_API_BASE_URL__.trim()
+        : "";
+    const API_BASE_URL = (runtimeApiBaseUrl || (hasApiBaseMetaTag ? metaApiBaseUrl : DEFAULT_API_BASE_URL))
+        .replace(/\/+$/, "");
     const storageKey = "qa-system-auth";
     const defaultPanelId = "requirements-panel";
     const loginForm = document.getElementById("login-form");
