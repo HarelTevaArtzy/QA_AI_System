@@ -183,49 +183,68 @@
                     <form id="scenario-form" class="card form-card">
                         <div class="card-heading">
                             <h3 id="scenario-form-title">Create Scenario</h3>
-                            <button type="button" class="text-button" id="scenario-reset">Clear</button>
+                            <div class="card-heading-actions">
+                                <button type="button" class="ghost-button small" id="scenario-mode-toggle">Use Chat Mode</button>
+                                <button type="button" class="text-button" id="scenario-reset">Clear</button>
+                            </div>
                         </div>
                         <input type="hidden" id="scenario-id">
 
-                        <label>
-                            <span>Title</span>
-                            <input type="text" id="scenario-title" placeholder="Checkout denies duplicate payment" required>
-                        </label>
+                        <div id="scenario-form-fields">
+                            <label>
+                                <span>Title</span>
+                                <input type="text" id="scenario-title" placeholder="Checkout denies duplicate payment">
+                            </label>
 
-                        <label>
-                            <span>Description</span>
-                            <textarea id="scenario-description" rows="3"
-                                      placeholder="Describe the scope, feature, or defect context."></textarea>
-                        </label>
+                            <label>
+                                <span>Description</span>
+                                <textarea id="scenario-description" rows="3"
+                                          placeholder="Describe the scope, feature, or defect context."></textarea>
+                            </label>
 
-                        <label>
-                            <span>Test Steps</span>
-                            <textarea id="scenario-steps" rows="5"
-                                      placeholder="One step per line."></textarea>
-                        </label>
+                            <label>
+                                <span>Test Steps</span>
+                                <textarea id="scenario-steps" rows="5"
+                                          placeholder="One step per line."></textarea>
+                            </label>
 
-                        <label>
-                            <span>Expected Results</span>
-                            <textarea id="scenario-expected" rows="4"
-                                      placeholder="One expected result per line."></textarea>
-                        </label>
+                            <label>
+                                <span>Expected Results</span>
+                                <textarea id="scenario-expected" rows="4"
+                                          placeholder="One expected result per line."></textarea>
+                            </label>
 
-                        <label>
-                            <span>Priority</span>
-                            <select id="scenario-priority">
-                                <option value="low">Low</option>
-                                <option value="medium" selected>Medium</option>
-                                <option value="high">High</option>
-                                <option value="critical">Critical</option>
-                            </select>
-                        </label>
+                            <label>
+                                <span>Priority</span>
+                                <select id="scenario-priority">
+                                    <option value="low">Low</option>
+                                    <option value="medium" selected>Medium</option>
+                                    <option value="high">High</option>
+                                    <option value="critical">Critical</option>
+                                </select>
+                            </label>
 
-                        <div class="linked-selector-field">
-                            <span class="scenario-section-title">Linked Requirements</span>
-                            <div id="scenario-requirement-selector" class="linked-selector"></div>
+                            <div class="linked-selector-field">
+                                <span class="scenario-section-title">Linked Requirements</span>
+                                <div id="scenario-requirement-selector" class="linked-selector"></div>
+                            </div>
+
+                            <button type="submit" class="primary-button" id="scenario-submit">Save Scenario</button>
                         </div>
 
-                        <button type="submit" class="primary-button" id="scenario-submit">Save Scenario</button>
+                        <div id="scenario-chat-mode" class="scenario-chat-mode hidden">
+                            <p class="hint-text">Guided mode asks one scenario field at a time and saves it for you.</p>
+                            <div id="scenario-chat-log" class="scenario-chat-log"></div>
+                            <label>
+                                <span>Your Answer</span>
+                                <textarea id="scenario-chat-input" rows="3"
+                                          placeholder="Type your answer here. Use multiple lines for steps or expected results."></textarea>
+                            </label>
+                            <div class="scenario-chat-actions">
+                                <button type="button" class="primary-button" id="scenario-chat-send">Send</button>
+                            </div>
+                        </div>
+
                         <p class="form-status" id="scenario-status"></p>
                     </form>
 

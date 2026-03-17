@@ -647,6 +647,61 @@ button:hover {
     margin-bottom: 14px;
 }
 
+.scenario-chat-mode {
+    display: grid;
+    gap: 12px;
+}
+
+.scenario-chat-mode .hint-text {
+    margin: 0;
+}
+
+.scenario-chat-log {
+    display: grid;
+    gap: 10px;
+    max-height: 320px;
+    overflow: auto;
+    padding-right: 6px;
+}
+
+.scenario-chat-message {
+    display: grid;
+    gap: 6px;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--surface-strong);
+}
+
+.scenario-chat-message.is-bot {
+    border-color: rgba(45, 118, 111, 0.22);
+    background: rgba(45, 118, 111, 0.08);
+}
+
+.scenario-chat-message.is-user {
+    border-color: rgba(177, 65, 46, 0.22);
+    background: rgba(177, 65, 46, 0.1);
+}
+
+.scenario-chat-speaker {
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.scenario-chat-message p {
+    margin: 0;
+    line-height: 1.5;
+    color: var(--ink);
+}
+
+.scenario-chat-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
 .mini-list {
     max-height: 420px;
 }
